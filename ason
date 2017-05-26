@@ -9,6 +9,8 @@
 #                      NOTE: REQUIRES ACCESS to "/receiver.json", which you
 #                            get by adding an appropriate entry in the
 #                            /etc/lighttpd/conf-available/50-piaware.conf file.
+#  2017-05-26  msipin  Improved range-calculation logic slightly (it's still just
+#                      a back-of-the-envelope guess...).
 #######################################################
 
 tmp_file1=/var/tmp/$$.ason.1
@@ -72,9 +74,11 @@ for (i=1; i<= NF; i++) {
   ## Debugging - Show rx_lat and rx_long
   ##printf "DEBUG: rx_lat=%s, rx_lon=%s\n", RX_LAT, RX_LON
 
-  # Approximate miles-per-degree (presume both lat and lon are same...for grins!)
-  #MILES_PER_DEGREE=69.0535
-  MILES_PER_DEGREE=58.6349
+  # (Approx.) Miles-per-degree of latitude/longitude - accuracy is
+  # not as important; only being used for rough estimation
+  # graphing purposes.
+  mpd_lat = 69.0535	# Avg, equator-to-pole
+  mpd_lon = 53.0000	# At 40 degrees N/S
 
   # Display header
   #printf "  ICAO |CALLSIGN|LEVEL |GSPD|TRAK|LATTITUDE  |LONGITUDE  |VRT_RT|SQWK |RSSI       ICAO |CALLSIGN|LEVEL |GSPD|TRAK|LATTITUDE  |LONGITUDE  |VRT_RT|SQWK |RSSI  "
@@ -95,8 +99,14 @@ for (i=1; i<= NF; i++) {
     RANGE=""
     if ((LAT != "") && (LON != "")) {
         DLAT=RX_LAT-LAT
+        # Calculate approximate distance (in miles) of delta in latitude
+	LAT_DELTA_MILES=DLAT*mpd_lat
+
         DLON=RX_LON-LON
-        RANGE=sqrt((DLAT*DLAT)+(DLON*DLON))*MILES_PER_DEGREE*0.868976
+        # Calculate approximate distance (in miles) of delta in longitude
+	LON_DELTA_MILES=DLON*mpd_lon
+
+        RANGE=sqrt((LAT_DELTA_MILES*LAT_DELTA_MILES)+(LON_DELTA_MILES*LON_DELTA_MILES))*0.868976
     }
     if (NR > 1) printf "%7s|%8s|%6s|%4s|%4s|%6.1f|%6s|%5s|%6s", toupper(ICAO), CALLSIGN, LEVEL, GSPD, TRACK, RANGE, VERT_RATE, SQUAWK, RSSI
 
@@ -153,8 +163,14 @@ for (i=1; i<= NF; i++) {
 RANGE=""
 if ((LAT != "") && (LON != "")) {
     DLAT=RX_LAT-LAT
+    # Calculate approximate distance (in miles) of delta in latitude
+    LAT_DELTA_MILES=DLAT*mpd_lat
+
     DLON=RX_LON-LON
-    RANGE=sqrt((DLAT*DLAT)+(DLON*DLON))*MILES_PER_DEGREE*0.868976
+    # Calculate approximate distance (in miles) of delta in longitude
+    LON_DELTA_MILES=DLON*mpd_lon
+
+    RANGE=sqrt((LAT_DELTA_MILES*LAT_DELTA_MILES)+(LON_DELTA_MILES*LON_DELTA_MILES))*0.868976
 }
 if (NR > 1) printf "%7s|%8s|%6s|%4s|%4s|%6.1f|%6s|%5s|%6s", toupper(ICAO), CALLSIGN, LEVEL, GSPD, TRACK, RANGE, VERT_RATE, SQUAWK, RSSI
 
