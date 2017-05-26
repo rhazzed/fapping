@@ -76,7 +76,7 @@ for (i=1; i<= NF; i++) {
 
   # (Approx.) Miles-per-degree of latitude/longitude - accuracy is
   # not as important; only being used for rough estimation
-  # graphing purposes.
+  # of RANGE
   mpd_lat = 69.0535	# Avg, equator-to-pole
   mpd_lon = 53.0000	# At 40 degrees N/S
 
@@ -106,6 +106,7 @@ for (i=1; i<= NF; i++) {
         # Calculate approximate distance (in miles) of delta in longitude
 	LON_DELTA_MILES=DLON*mpd_lon
 
+        # Calculate the approximate range (in nautical miles)
         RANGE=sqrt((LAT_DELTA_MILES*LAT_DELTA_MILES)+(LON_DELTA_MILES*LON_DELTA_MILES))*0.868976
     }
     if (NR > 1) printf "%7s|%8s|%6s|%4s|%4s|%6.1f|%6s|%5s|%6s", toupper(ICAO), CALLSIGN, LEVEL, GSPD, TRACK, RANGE, VERT_RATE, SQUAWK, RSSI
@@ -170,6 +171,7 @@ if ((LAT != "") && (LON != "")) {
     # Calculate approximate distance (in miles) of delta in longitude
     LON_DELTA_MILES=DLON*mpd_lon
 
+    # Calculate the approximate range (in nautical miles)
     RANGE=sqrt((LAT_DELTA_MILES*LAT_DELTA_MILES)+(LON_DELTA_MILES*LON_DELTA_MILES))*0.868976
 }
 if (NR > 1) printf "%7s|%8s|%6s|%4s|%4s|%6.1f|%6s|%5s|%6s", toupper(ICAO), CALLSIGN, LEVEL, GSPD, TRACK, RANGE, VERT_RATE, SQUAWK, RSSI
