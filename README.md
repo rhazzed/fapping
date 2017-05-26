@@ -2,7 +2,7 @@ This is a respository for working with the piAware (flightaware for the Raspberr
 
 - The fap team
 
-(P.S. "fap" came from the first tool we wrote - "FlightAware Profiler". Don't project your issues onto it... ;)
+(P.S. "fap" came from the first tool we wrote - "Flight Aware Performance". Don't project your issues onto us... ;)
 
 ###################################################################
 EMAIL CHAIN DESCRIBING THE TOOLS AND THEIR USE FOLLOWS
