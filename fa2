@@ -1,0 +1,52 @@
+#!/bin/sh
+################################
+# fa2 - Display FlightAware Airplane RSSIs from the command-line
+#
+# HISTORICAL INFORMATION:
+#
+#  2017-04-27  msipin  Created
+#
+# NOTE: THIS SCRIPT IS OBSOLETE - USE FASTATS INSTEAD
+################################
+
+tmp_file1=/var/tmp/fa2.$$.1
+
+trap "rm -f $tmp_file1; exit 0" 0 1 2 3 6 12 15
+
+
+rm -f $tmp_file1
+
+echo
+grep  rssi /run/dump1090-fa/aircraft.json | sed "s/}//g" | sed "s/,/ /g" | sed "s/\"/ /g" | sed "s/:/ /g" | awk '{
+    for (i=1; i <= NF; i++) {
+        if (($i == "seen") || ($i == "rssi")) {
+            printf "%s    ", $(i+1);
+        }
+    }
+    printf "\n";
+#}
+#END {
+#printf "\nTotal  %d\n", total;
+}' | awk '{
+
+    total = total + 1;
+    if ($1 < 10.0) print $2;
+
+}
+END {
+    printf "\n9999x9999x Total  %d\n", total;
+}' | grep -v "\-49\.5" | sort -n > $tmp_file1
+
+
+head -10 $tmp_file1
+echo
+echo " --to-- "
+echo
+tail -12 $tmp_file1 | head -10
+
+num=`wc -l $tmp_file1 | awk '{ print $1}'`
+echo
+echo "Planes seen (last 10s): "$num
+echo
+
+echo

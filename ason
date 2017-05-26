@@ -1,0 +1,173 @@
+#!/bin/sh
+#######################################################
+# ason - Get ADS-B data from a PiAware server and display it as text.
+#
+# HISTORICAL INFORMATION -
+#
+#  2017-05-25  msipin  Created.
+#  2017-05-26  msipin  Replaced lattitude/longitude with range (in nm).
+#                      NOTE: REQUIRES ACCESS to "/receiver.json", which you
+#                            get by adding an appropriate entry in the
+#                            /etc/lighttpd/conf-available/50-piaware.conf file.
+#######################################################
+
+#IP_ADDR="192.168.2.127"
+
+tmp_file1=/var/tmp/$$.ason.1
+
+trap "rm -f $tmp_file1;exit 0" 0 1 2 3 6 12 15
+
+usage() {
+	echo
+	echo "usage: $0 <ip_address>"
+	echo
+}
+
+
+if [ $# -lt 1 ]
+then
+	usage;
+	exit 2;
+fi
+
+IP_ADDR=$1
+
+
+rm -f $tmp_file1
+
+
+
+# Pickup the receiver's lat/long
+wget -q http://${IP_ADDR}/receiver.json -O - | sed "s/{//g" | sed "s/}//g" | sed "s/,/ /g" | sed "s/\"//g" | sed "s/ : /:/g" | awk '{ for (i=1;i<=NF;i++){print $i;};}' | awk -F":" '{ if (($1 == "lat") || ($1 == "lon")) print $1,$2; }' >> $tmp_file1
+
+rx_lat=`grep "^lat " $tmp_file1 | awk '{ print $2 }'`
+rx_lon=`grep "^lon " $tmp_file1 | awk '{ print $2 }'`
+
+#echo "RX_LAT = "$rx_lat
+#echo "RX_LON = "$rx_lon
+## For debugging, prolly wanna exit here...
+#exit 2
+
+
+
+tput clear
+
+while [ 1 ]
+do
+    tput home
+    # Determine how big the screen is
+    rows=`echo "lines"|tput -S`
+    cols=`echo "cols"|tput -S`
+
+    lines_to_display=`expr $rows - 2`
+
+
+    wget -q http://${IP_ADDR}/aircraft.json -O - | grep '"hex":' | sed "s/{//g" | sed "s/}//g" | sed "s/,/ /g" | sed "s/\"//g" | sed "s/ mlat:.*.tisb/ tisb/" | sed "s/ tisb:.*.messages/ messages/" | awk '{
+
+for (i=1; i<= NF; i++) {
+
+  print $i;
+}
+
+}' | awk -F":" -v RX_LAT=${rx_lat} -v RX_LON=${rx_lon} 'BEGIN {
+
+  ## Debugging - Show rx_lat and rx_long
+  ##printf "DEBUG: rx_lat=%s, rx_lon=%s\n", RX_LAT, RX_LON
+
+  # Approximate miles-per-degree (presume both lat and lon are same...for grins!)
+  #MILES_PER_DEGREE=69.0535
+  MILES_PER_DEGREE=58.6349
+
+  # Display header
+  #printf "  ICAO |CALLSIGN|LEVEL |GSPD|TRAK|LATTITUDE  |LONGITUDE  |VRT_RT|SQWK |RSSI       ICAO |CALLSIGN|LEVEL |GSPD|TRAK|LATTITUDE  |LONGITUDE  |VRT_RT|SQWK |RSSI  "
+  printf "  ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI       ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI  "
+
+  # Initialize variables
+  ICAO="";
+
+  loop=1;
+}{
+
+  # ICAO = hex:4caab6
+  # Found new plane
+  if ($1 == "hex") {
+
+    # Display old plane info
+    #if (NR > 1) printf "%7s|%8s|%6s|%4s|%4s|%11s|%11s|%6s|%5s|%6s", toupper(ICAO), CALLSIGN, LEVEL, GSPD, TRACK, LAT, LON, VERT_RATE, SQUAWK, RSSI
+    RANGE=""
+    if ((LAT != "") && (LON != "")) {
+        DLAT=RX_LAT-LAT
+        DLON=RX_LON-LON
+        RANGE=sqrt((DLAT*DLAT)+(DLON*DLON))*MILES_PER_DEGREE*0.868976
+    }
+    if (NR > 1) printf "%7s|%8s|%6s|%4s|%4s|%6.1f|%6s|%5s|%6s", toupper(ICAO), CALLSIGN, LEVEL, GSPD, TRACK, RANGE, VERT_RATE, SQUAWK, RSSI
+
+    loop++;
+    if ((loop % 2) == 0) printf "\n"
+    else printf "   "
+
+    # Pickup new ICAO
+    ICAO=$2
+
+    # Erase old data
+    CALLSIGN=""
+    LEVEL=""
+    GSPD=""
+    TRACK=""
+    LAT=""
+    LON=""
+    VERT_RATE=""
+    SQUAWK=""
+    RSSI=""
+  }
+
+  # CALLSIGN = flight:AAL1024
+  if ($1 == "flight") CALLSIGN=$2
+
+  # LEVEL = altitude:8575
+  if ($1 == "altitude") LEVEL=$2
+
+  # GSPD = speed:125
+  if ($1 == "speed") GSPD=$2
+
+  # TRACK = track:117
+  if ($1 == "track") TRACK=$2
+
+  # LAT = lat:33.261703
+  if ($1 == "lat") LAT=$2
+
+  # LON = lon:-114.065720
+  if ($1 == "lon") LON=$2
+
+  # VERT_RATE = vert_rate:-1024
+  if ($1 == "vert_rate") VERT_RATE=$2
+
+  # SQUAWK = squawk:0675
+  if ($1 == "squawk") SQUAWK=$2
+
+  # RSSI = rssi:-15.9
+  if ($1 == "rssi") RSSI=$2
+
+} END {
+
+# Display last plane picked up
+#printf "%7s|%8s|%6s|%4s|%4s|%11s|%11s|%6s|%5s|%6s\n", toupper(ICAO), CALLSIGN, LEVEL, GSPD, TRACK, LAT, LON, VERT_RATE, SQUAWK, RSSI
+RANGE=""
+if ((LAT != "") && (LON != "")) {
+    DLAT=RX_LAT-LAT
+    DLON=RX_LON-LON
+    RANGE=sqrt((DLAT*DLAT)+(DLON*DLON))*MILES_PER_DEGREE*0.868976
+}
+if (NR > 1) printf "%7s|%8s|%6s|%4s|%4s|%6.1f|%6s|%5s|%6s", toupper(ICAO), CALLSIGN, LEVEL, GSPD, TRACK, RANGE, VERT_RATE, SQUAWK, RSSI
+
+for (i=0; i < 40; i++) { printf "                                                                                                                                                             \n"; }
+
+}' | sed "s/|   0.0|/|      |/g" | head -${lines_to_display}
+
+sleep 4
+done
+
+echo
+
+exit 0
+

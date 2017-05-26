@@ -1,0 +1,198 @@
+#!/bin/sh
+#
+# NOTE:  /usr/bin/ksh is needed for Raspberry Pi!
+#        All other distros can probably use /bin/sh
+#
+################################################
+# rawsb - Parse "raw" ADS-B output obtained from port 30,003 ("SBS1 Base Station format").
+#
+# HISTORICAL INFORMATION -
+#
+#  2017-05-19  msipin  Created as an experiment to see if I could "understand" the output
+#                      from my piAware (FlightAware) installation's port 30003 output.
+#################################################
+
+#IN_FILE=/home/sipy/Downloads/adsb_msgs.txt
+#IP_ADDR="192.168.2.127"
+
+
+trap "exit 0" 0 1 2 3 6 12 15
+
+usage() {
+	echo
+	echo "usage: $0 <ip_address>"
+	echo
+}
+
+
+if [ $# -lt 1 ]
+then
+	usage;
+	exit 2;
+fi
+
+IP_ADDR=$1
+
+tput clear
+
+cat < /dev/tcp/${IP_ADDR}/30003 | awk -F"," 'BEGIN {
+
+REFRESH_INTERVAL=4               # How often (in seconds) we redraw the screen
+CULL_INTERVAL=60                 # How old (in seconds) airplane data is allowed to be before we stop displaying it
+NUM_PLANES_TO_SHOW=72            # Keep this divisible by two (lines up nicely on screen)
+last_time=9999;
+DISPLAY_HEADER="  ICAO |CALLSIGN|LEVEL |GSPD|TRAK|LATTITUDE  |LONGITUDE  |VRT_RT|SQWK |EMERGENCY"
+DISPLAY_SPACER="                                                                                    "
+ITERATION=1
+
+}{
+
+# FIELDS WE (generally) DO NOT NEED TO DISPLAY -
+MSG_TYPE=$1
+TX_TYPE=$2
+SESSION_ID=$3
+DATE_SENT=$7
+TIME_SENT=$8
+DATE_RCVD=$9
+TIME_RCVD=$10
+SQUAWK_CHANGED_FLAG=$19
+SPI_FLAG=$21
+IS_ON_GROUND_FLAG=$22
+
+
+
+# FIELDS WE DEFINITELY WANT -
+AIRCRAFT_ID=$4
+ICAO=$5
+FLIGHT_ID=$6
+CALLSIGN=$11
+FLIGHT_LEVEL=$12
+GROUND_SPEED=$13
+TRACK=$14
+LATT=$15
+LONG=$16
+VERT_RATE=$17
+MODE_A_SQUAWK_CODE=$18
+EMERGENCY_FLAG=$20
+
+
+# If ICAO is NOT NULL - Use ICAO as a unique key, add or update the database with non-empty fields
+if (ICAO != "") {
+
+
+    # Remember that we heard this airplane
+    planes[ICAO]=ITERATION
+
+    # Pickup values, if populated
+    if (CALLSIGN != "") callsign[ICAO]=CALLSIGN
+    if (FLIGHT_LEVEL != "") flight_level[ICAO]=FLIGHT_LEVEL
+    if (GROUND_SPEED != "") ground_speed[ICAO]=GROUND_SPEED
+    if (TRACK != "") track[ICAO]=TRACK
+    if (LATT != "") latt[ICAO]=LATT
+    if (LONG != "") long[ICAO]=LONG
+    if (VERT_RATE != "") vert_rate[ICAO]=VERT_RATE
+    if (MODE_A_SQUAWK_CODE != "") mode_a_squawk_code[ICAO]=MODE_A_SQUAWK_CODE
+    if (EMERGENCY_FLAG != "") emergency_flag[ICAO]=EMERGENCY_FLAG
+
+} # End, ICAO is not null
+
+# If you want to allow the user to break out, change
+# the following test case to "true" -
+if (0) {
+    exit_code = system("sleep 0 && exit 27")
+    #print "exit_code: " exit_code
+    if (exit_code != 27) {
+        print "\n"
+        exit;
+    }
+}
+
+
+
+if (time_to_print != 0) {
+
+    # Reset time-to-print indication
+    time_to_print = 0
+
+    # Increment the iteration counter (used for aging out "old" reports)
+    ITERATION++
+
+    # Home the cursor and display the heading
+    system("tput home")
+    #print "     GMT TIME: ",TIME_RCVD
+    print DISPLAY_HEADER,"",DISPLAY_HEADER
+
+    loop=0;
+    skipped=0;
+    for (plane in planes) {
+        # If plane data is "too old", skip it.
+        # NOTE: ITERATION gets incremented every time the screen gets redrawn.
+        #       The screen gets drawn (roughly) every REFRESH_INTERVAL seconds.
+        #       So to cull data that is n-number of seconds old we would expect
+        #       ITERATIONs to be (n-seconds / REFRESH_INTERVAL)
+        if (ITERATION > (planes[plane] + (CULL_INTERVAL / REFRESH_INTERVAL))) {
+            # Too old. Skip it and remember that we did
+            delete planes[plane]
+            skipped++;
+        }
+        else {
+            loop++
+            printf "%7s|%8s|%6s|%4s|%4s|%11s|%11s|%6s|%5s|%2s",
+                plane,                                              # planes[plane],
+                callsign[plane],
+                flight_level[plane],
+                ground_speed[plane],
+                track[plane],
+                latt[plane],
+                long[plane],
+                vert_rate[plane],
+                mode_a_squawk_code[plane],
+                emergency_flag[plane];
+
+            if ((loop % 2) == 0) printf "\n"
+            else printf "         "
+
+            # If debugging, only display a few planes
+            if (loop >= NUM_PLANES_TO_SHOW) {
+                printf "(more)"
+                break;
+            }
+        }
+    }
+
+    # If we skipped any planes, make sure to clear out the screen where they used to be!
+    for (i=0; i <= (skipped+1); i+=2) {
+        if (i > 0) printf "\n"
+        printf "%s%s",DISPLAY_SPACER,DISPLAY_SPACER;
+    }
+
+}
+
+
+# To see if we should redraw the list of planes -
+split(TIME_RCVD,flds,":")
+if ((flds[3] < last_time) || (flds[3] > (last_time+REFRESH_INTERVAL))) {
+    time_to_print = 1
+    last_time = flds[3]
+}
+
+
+
+}'
+
+exit 0
+
+ ICAO  |CALLSIGN|LEVEL |GSPD|TRAK|LATTITUDE  |LONGITUDE  |VRT_RT|SQWK |EMERGENCY
+ A0733A|        | 10075|    |    |           |           |      |     |  
+ AA56F8|        | 38000|    |    |           |           |      |     |  
+ A0733A|UPS5514 |      |    |    |           |           |      |     |  
+ ABC544|N858CB  |      |    |    |           |           |      |     |  
+ A0A80E|        |      | 429| 300|           |           |     0|     |  
+ A8B44E|        | 36975|    |    |           |           |      |     |  
+ A2AFBA|        | 32000|    |    |   35.55231| -115.46459|      |     |  
+ ABD204|        |      | 310| 153|           |           | -1536|     |  
+ A988D7|        |      |    |    |           |           |      | 3633| 0
+ A437CE|        |      |    |    |           |           |      | 1071| 0
+ A2AFBA|UPS2910 |      |    |    |           |           |      |     |  
+
+

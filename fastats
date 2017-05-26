@@ -1,0 +1,64 @@
+#!/bin/sh
+################################
+# fastats - Display FlightAware stats from the command-line
+#
+# NOTE: Updates only once every 60 seconds.
+#
+# HISTORICAL INFORMATION:
+#
+#  2017-04-27  msipin  Created
+#  2017-05-02  msipin  Changed text on weak-to-strong signal
+#                      list.
+################################
+
+tmp_file1=/var/tmp/fa2.$$.1
+
+trap "rm -f $tmp_file1; exit 0" 0 1 2 3 6 12 15
+
+
+rm -f $tmp_file1
+
+echo
+grep last1min /run/dump1090-fa/stats.json | sed "s/{/ /g" | sed "s/}/ /g" | sed "s/\]/ /g" | sed "s/\[/ /g" | awk -F"," '{ for (i=1; i<= NF;i++) { print $i; }; }' | egrep "signal|noise|peak|messages" | sed "s/:/: /g" | sed "s/\"//g" | awk '{
+
+if (($1 == "strong_signals:") || ($1 == "messages:")) {
+    printf "%-16s %5s ( %4d / second)\n", $1, $2, $2/60;
+}
+else printf "%-16s %5s\n", $1, $2;
+
+}'
+
+echo
+
+grep  rssi /run/dump1090-fa/aircraft.json | sed "s/}//g" | sed "s/,/ /g" | sed "s/\"/ /g" | sed "s/:/ /g" | awk '{
+    for (i=1; i <= NF; i++) {
+        if (($i == "seen") || ($i == "rssi")) {
+            printf "%s    ", $(i+1);
+        }
+    }
+    printf "\n";
+#}
+#END {
+#printf "\nTotal  %d\n", total;
+}' | awk '{
+
+    total = total + 1;
+    if ($1 < 10.0) print $2;
+
+}
+END {
+    printf "\n9999x9999x Total  %d\n", total;
+}' | grep -v "\-49\.5" | sort -n > $tmp_file1
+
+
+echo "Weakest signals:"
+head -10 $tmp_file1
+echo
+echo "Strongest signals:"
+tail -12 $tmp_file1 | head -10
+
+num=`wc -l $tmp_file1 | awk '{ print $1}'`
+echo
+echo "Planes seen (last 10s): "$num
+
+echo
