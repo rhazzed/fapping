@@ -17,6 +17,8 @@ trap "rm -f $tmp_file1; exit 0" 0 1 2 3 6 12 15
 rm -f $tmp_file1
 
 echo
+echo "#### (NOTE: This tool is obsolete. Use fastats instead!) ####"
+echo
 grep  rssi /run/dump1090-fa/aircraft.json | sed "s/}//g" | sed "s/,/ /g" | sed "s/\"/ /g" | sed "s/:/ /g" | awk '{
     for (i=1; i <= NF; i++) {
         if (($i == "seen") || ($i == "rssi")) {

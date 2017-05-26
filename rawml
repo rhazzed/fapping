@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/ksh
 #
 # NOTE:  /usr/bin/ksh is needed for Raspberry Pi!
 #        All other distros can probably use /bin/sh
