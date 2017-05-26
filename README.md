@@ -193,9 +193,9 @@ EMAIL CHAIN DESCRIBING THE TOOLS AND THEIR USE FOLLOWS
 > > 
 > > Enjoy, and let me know if you have any suggestions for improvements!
 > > 
-> > On Fri, 2017-05-05 at 12:00 -0700, Mike Sipin wrote:
+> > On Fri, 2017-05-05 at 12:00 -0700, Mike wrote:
 > > > 
-> > > My buddy (Eric, whom I cc'd on this email) and I changed some things on
+> > > My buddy and I changed some things on
 > > > the ADS-B tools I sent you earlier.  The Python tool now has "pretty
 > > > colors"!  It's much more visually appealing!  There is also more
 > > > information about the grid being used, etc.
