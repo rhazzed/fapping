@@ -11,8 +11,6 @@
 #                            /etc/lighttpd/conf-available/50-piaware.conf file.
 #######################################################
 
-#IP_ADDR="192.168.2.127"
-
 tmp_file1=/var/tmp/$$.ason.1
 
 trap "rm -f $tmp_file1;exit 0" 0 1 2 3 6 12 15

@@ -11,10 +11,6 @@
 #  2017-05-25  msipin  Copied from rawsb.
 #################################################
 
-#IN_FILE=/home/sipy/Downloads/adsb_msgs.txt
-#IP_ADDR="192.168.2.127"
-
-
 trap "exit 0" 0 1 2 3 6 12 15
 
 usage() {
