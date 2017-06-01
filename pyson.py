@@ -7,8 +7,9 @@
 #  2017-05-31  msipin  Created.
 ############################################
 
-import sys, math
+import sys, math, time
 import urllib, json
+import subprocess as sp
 
 
 # "No Such Number" - Until I can figure out how to filter out non-existent dictionary entries,
@@ -49,17 +50,20 @@ if ((RX_LAT == NSN) | (RX_LON == NSN)):
     raise SystemExit
 
 
-print "\n  ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI        ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI       "
+should_continue=1
+while (should_continue == 1):
+  sp.call('tput clear',shell=True)
+  print "  ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI        ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI       "
 
-url = "http://192.168.2.127:8080/aircraft.json"
-response = urllib.urlopen(url)
-d = json.loads(response.read())['aircraft']
-#print '\n'
-#print d
-#print 'Length of dictionary: %d\n' % len(d)
-#print '\n'
-loop=0
-for line in d:
+  url = "http://192.168.2.127:8080/aircraft.json"
+  response = urllib.urlopen(url)
+  d = json.loads(response.read())['aircraft']
+  #print '\n'
+  #print d
+  #print 'Length of dictionary: %d\n' % len(d)
+  #print '\n'
+  loop=0
+  for line in d:
 
     loop=loop+1
 
@@ -157,11 +161,9 @@ for line in d:
     #instr = "{0} {1} {2} {3} {4} {5} {6} {7} {8} {9}".format(ICAO, CALLSIGN, LEVEL, GSPD, TRACK, LAT, LON, VERT_RATE, SQUAWK, RSSI)
     #print instr
 
-#   ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI       ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI  
-#   if (NR > 1) printf "%7s|%8s|%6s|%4s|%4s|%6.1f|%6s|%5s|%6s", toupper(ICAO), CALLSIGN, LEVEL, GSPD, TRACK, RANGE, VERT_RATE, SQUAWK, RSSI
-# if ($1 == "flight") CALLSIGN=$2
-
-
+  sys.stdout.flush()
+  time.sleep(4)
+# End of while should_continue...
 
 raise SystemExit
 
