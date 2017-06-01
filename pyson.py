@@ -327,6 +327,48 @@ while (should_continue == 1):
         c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=range_field) + str(RANGE) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
 
 
+    # Fetch ALL data from the database
+    #ICAO = str(line.get(KEY_ICAO, '')).upper()
+    #CALLSIGN = str(line.get(KEY_CALLSIGN, '')).upper()
+    #LEVEL = line.get(KEY_LEVEL, NSN)
+    #GSPD = line.get(KEY_GSPD, NSN)
+    #TRACK = line.get(KEY_TRACK, NSN)
+    #LAT = line.get(KEY_LAT, NSN)
+    #LON = line.get(KEY_LON, NSN)
+    #VERT_RATE = line.get(KEY_VERT_RATE, NSN)
+    #SQUAWK= line.get(KEY_SQUAWK, NSN)
+    #RSSI = line.get(KEY_RSSI, NSN)
+    #AGE = line.get(KEY_AGE, NSN)
+    #RANGE=KEY_RANGE
+    c.execute("SELECT {cn1},{cn2},{cn3},{cn4},{cn5},{cn6},{cn7},{cn8},{cn9},{cn10},{cn11} FROM {tn} WHERE {idf}=('".format( \
+           cn1=callsign_field, \
+           cn2=level_field, \
+           cn3=gspd_field, \
+           cn4=track_field, \
+           cn5=lat_field, \
+           cn6=lon_field, \
+           cn7=vert_rate_field, \
+           cn8=squawk_field, \
+           cn9=rssi_field, \
+           cn10=age_field, \
+           cn11=range_field, \
+           tn=table_name1, idf=key_field) + ICAO + "')")
+    id_exists = c.fetchone()
+    if id_exists:
+        CALLSIGN=format(id_exists[0])
+        LEVEL=id_exists[1]
+        GSPD=id_exists[2]
+        TRACK=id_exists[3]
+        LAT=id_exists[4]
+        LON=id_exists[5]
+        VERT_RATE=id_exists[6]
+        SQUAWK=id_exists[7]
+        RSSI=id_exists[8]
+        AGE=id_exists[9]
+        RANGE=id_exists[10]
+    else:
+        print("\nNOTHING FOUND IN DB FOR ICAO = " + ICAO + "!")
+
 
 
     # Don't want to use information that is "too old"
@@ -380,7 +422,7 @@ while (should_continue == 1):
         sys.stdout.write('{:6s}'.format(''))
     sys.stdout.write('|')
     if (SQUAWK != NSN):
-        sys.stdout.write('{:5s}'.format(SQUAWK))
+        sys.stdout.write('{:5d}'.format(SQUAWK))
     else:
         sys.stdout.write('{:5s}'.format(''))
     sys.stdout.write('|')
