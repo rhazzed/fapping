@@ -83,6 +83,24 @@ mpd_lon = 53.0000	# At 40 degrees N/S
 
 
 
+
+if (len(sys.argv) <2):
+    sys.stdout.write('\nUsage: ')
+    sys.stdout.write(sys.argv[0])
+    sys.stdout.write(' <ip_address>\n\n')
+    raise SystemExit
+
+# Pickup IP address
+IP_ADDR=sys.argv[1]
+
+
+
+
+
+
+
+
+
 # TO FIND OUT THE NUMBER OF LINES AVAILABLE ON THE SCREEN -
 cmd='echo "lines"|tput -S'
 result = subprocess.check_output(cmd, shell=True)
@@ -96,7 +114,7 @@ lines_to_display=int(result)-1
 
 # Pickup receiver lat/lon
 # { "version" : "3.5.0", "refresh" : 1000, "history" : 120, "lat" : 34.492610, "lon" : -117.407060 }
-url = "http://192.168.2.117:8080/receiver.json"
+url = "http://" + IP_ADDR + ":8080/receiver.json"
 response = urllib.urlopen(url)
 line = json.loads(response.read())
 RX_LAT = line.get(KEY_LAT, NSN)
@@ -120,7 +138,7 @@ while (should_continue == 1):
 
   print "  ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI        ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI       "
 
-  url = "http://192.168.2.117:8080/aircraft.json"
+  url = "http://" + IP_ADDR + ":8080/aircraft.json"
   response = urllib.urlopen(url)
   d = json.loads(response.read())['aircraft']
   #print '\n'
@@ -262,11 +280,11 @@ raise SystemExit
 #########################
 # Potentially useful URLs  -
 # 
-# http://192.168.2.117:8080/receiver.json
+# http://${IP_ADDR}:8080/receiver.json
 # { "version" : "3.5.0", "refresh" : 1000, "history" : 120, "lat" : 34.492610, "lon" : -117.407060 }
 # 
 # 
-# http://192.168.2.117:8080/aircraft.json
+# http://${IP_ADDR}:8080/aircraft.json
 # { "now" : 1496279916.6,
 #  "messages" : 420047,
 #  "aircraft" : [
