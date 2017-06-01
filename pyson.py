@@ -239,6 +239,7 @@ while (should_continue == 1):
   #print d
   #print 'Length of dictionary: %d\n' % len(d)
   #print '\n'
+  ############# START OF PARSING ALL URL DATA  ###############
   for line in d:
 
     #print '\nRead line - %s' % line
@@ -325,8 +326,28 @@ while (should_continue == 1):
     # RANGE=NSN
     if (RANGE != NSN):
         c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=range_field) + str(RANGE) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
+    conn.commit()
+
+  ############# END OF PARSING ALL URL DATA  ###############
 
 
+  ## Get all data from the database in max-range order, desc
+  #retrieve-all-ICAOs-ordered by max-range descending
+  c.execute("SELECT {idf} FROM {tn} WHERE {sf} < {nsn} ORDER BY {sf} DESC, {rssi} DESC".format(idf=key_field, tn=table_name1, sf=range_field, nsn=NSN, rssi=rssi_field))
+  id_exists = c.fetchall()
+  for icao_data in id_exists:
+
+    ICAO=format(icao_data[0])
+
+    # If AGE too old, continue
+
+    # Display this ICAO's data
+
+
+################################
+################################
+
+    ############# START OF DATABSE INTERACTION ###############
     # Fetch ALL data from the database
     #ICAO = str(line.get(KEY_ICAO, '')).upper()
     #CALLSIGN = str(line.get(KEY_CALLSIGN, '')).upper()
@@ -436,6 +457,17 @@ while (should_continue == 1):
     #instr = "{0} {1} {2} {3} {4} {5} {6} {7} {8} {9}".format(ICAO, CALLSIGN, LEVEL, GSPD, TRACK, LAT, LON, VERT_RATE, SQUAWK, RSSI)
     #print instr
 
+
+
+
+    ############# END OF DATABSE INTERACTION ###############
+    ################################
+    ################################
+    # DONE Displaying this ICAO's data
+  # DONE for each ICAO retrieved from the database
+
+
+  # Clear the screen to the EOL/bottom
   # If there were fewer planes than allowed, clear the remaining screen real estate
   while (planes_shown < max_planes_to_show):
       # Newline -or- space
@@ -448,6 +480,9 @@ while (should_continue == 1):
       sys.stdout.write('                                                             ')
 
       planes_shown=planes_shown+1
+
+
+
 
 
   sys.stdout.flush()
