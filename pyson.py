@@ -26,6 +26,54 @@ KEY_LON='lon'
 KEY_VERT_RATE='vert_rate'
 KEY_SQUAWK='squawk'
 KEY_RSSI='rssi'
+KEY_AGE='seen'
+
+# Global variables
+ICAO=''
+CALLSIGN=''
+LEVEL=NSN
+GSPD=NSN
+TRACK=NSN
+LAT=NSN
+LON=NSN
+VERT_RATE=NSN
+SQUAWK=NSN
+RSSI =NSN
+RANGE=NSN
+AGE=NSN
+
+# How old (in seconds) a reading can be before we consider
+# it no longer valid for our purposes
+max_age = 15.0
+
+def init_display_vars():
+    global ICAO
+    global CALLSIGN
+    global LEVEL
+    global GSPD
+    global TRACK
+    global LAT
+    global LON
+    global VERT_RATE
+    global SQUAWK
+    global RSSI 
+    global RANGE
+    global AGE
+
+    ICAO=''
+    CALLSIGN=''
+    LEVEL=NSN
+    GSPD=NSN
+    TRACK=NSN
+    LAT=NSN
+    LON=NSN
+    VERT_RATE=NSN
+    SQUAWK=NSN
+    RSSI=NSN
+    RANGE=NSN
+    AGE=NSN
+
+
 
 # (Approx.) Miles-per-degree of latitude/longitude - accuracy is
 # not as important; only being used for rough estimation
@@ -38,7 +86,7 @@ mpd_lon = 53.0000	# At 40 degrees N/S
 # TO FIND OUT THE NUMBER OF LINES AVAILABLE ON THE SCREEN -
 cmd='echo "lines"|tput -S'
 result = subprocess.check_output(cmd, shell=True)
-lines_to_display=int(result)-2
+lines_to_display=int(result)-1
 #`echo "cols"|tput -S`
 ##print "Number of screen lines = %d" % lines_to_display
 ##print "Screen height = %s" % height
@@ -48,7 +96,7 @@ lines_to_display=int(result)-2
 
 # Pickup receiver lat/lon
 # { "version" : "3.5.0", "refresh" : 1000, "history" : 120, "lat" : 34.492610, "lon" : -117.407060 }
-url = "http://192.168.2.127:8080/receiver.json"
+url = "http://192.168.2.117:8080/receiver.json"
 response = urllib.urlopen(url)
 line = json.loads(response.read())
 RX_LAT = line.get(KEY_LAT, NSN)
@@ -62,28 +110,29 @@ if ((RX_LAT == NSN) | (RX_LON == NSN)):
 
 
 should_continue=1
+planes_shown=0
+max_planes_to_show=(lines_to_display*2)
+subprocess.call('tput clear',shell=True)
 while (should_continue == 1):
-  subprocess.call('tput clear',shell=True)
+
+  subprocess.call('tput home',shell=True)
+  planes_shown=0
+
   print "  ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI        ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI       "
 
-  url = "http://192.168.2.127:8080/aircraft.json"
+  url = "http://192.168.2.117:8080/aircraft.json"
   response = urllib.urlopen(url)
   d = json.loads(response.read())['aircraft']
   #print '\n'
   #print d
   #print 'Length of dictionary: %d\n' % len(d)
   #print '\n'
-  loop=0
-  lines_displayed=0
   for line in d:
-
-    loop=loop+1
 
     #print '\nRead line - %s' % line
     #for key in line:
     #   print 'key = %s   ' % key
     #   print 'value = %s\n' % line[key]
-
 
     #print '\nFORMATTED -'
     ICAO = str(line.get(KEY_ICAO, '')).upper()
@@ -106,6 +155,8 @@ while (should_continue == 1):
     #print '\tSQUAWK = %s' % SQUAWK
     RSSI = line.get(KEY_RSSI, NSN)
     #print '\tRSSI = %s' % RSSI
+    AGE = line.get(KEY_AGE, NSN)
+    #print '\tAGE = %s' % AGE
 
     # CONVERT LAT+LONG into RANGE (nm)
     RANGE=NSN
@@ -121,9 +172,23 @@ while (should_continue == 1):
         # Calculate the approximate range (in nautical miles)
         RANGE=math.sqrt((LAT_DELTA_MILES*LAT_DELTA_MILES)+(LON_DELTA_MILES*LON_DELTA_MILES))*0.868976
 
-    # If there is more to display than we have room to display, stop displaying it
-    if (lines_displayed >= lines_to_display):
+
+    # Don't want to use information that is "too old"
+    if (AGE > max_age):
+        continue
+
+
+    # If there is more to display than we have room to display, stop displaying more
+    if (planes_shown >= max_planes_to_show):
         break
+
+
+    if ((planes_shown > 0) & (planes_shown < max_planes_to_show)):
+        if ((planes_shown % 2) == 0):
+            sys.stdout.write('\n')
+        else:
+            sys.stdout.write('    ')
+
 
     #print "%7s|%8s|%6s|%4s|%4s|%11s|%11s|%6s|%5s|%6s" % '{:7s}'.format(ICAO), '{:8s}'.format(CALLSIGN), '{:6s}'.format(LEVEL), '{:4s}'.format(GSPD), '{:4s}'.format(TRACK), '{:11s}'.format(LAT), '{:6s}'.format(LON), '{:5s}'.format(VERT_RATE), '{:6s}'.format(SQUAWK), '{:xs}'.format(RSSI)
     sys.stdout.write('{:7s}'.format(ICAO))
@@ -168,14 +233,24 @@ while (should_continue == 1):
     else:
         sys.stdout.write('{:6s}'.format(''))
 
-    if ((loop % 2) == 0):
-        sys.stdout.write('\n')
-        lines_displayed=lines_displayed+1
-    else:
-        sys.stdout.write('    ')
+    planes_shown=planes_shown+1
 
     #instr = "{0} {1} {2} {3} {4} {5} {6} {7} {8} {9}".format(ICAO, CALLSIGN, LEVEL, GSPD, TRACK, LAT, LON, VERT_RATE, SQUAWK, RSSI)
     #print instr
+
+  # If there were fewer planes than allowed, clear the remaining screen real estate
+  while (planes_shown < max_planes_to_show):
+      # Newline -or- space
+      if ((planes_shown % 2) == 0):
+          sys.stdout.write('\n')
+      else:
+          sys.stdout.write('    ')
+
+      # Show a "blank plane"
+      sys.stdout.write('                                                             ')
+
+      planes_shown=planes_shown+1
+
 
   sys.stdout.flush()
   time.sleep(4)
