@@ -46,11 +46,13 @@ RANGE=NSN
 AGE=NSN
 
 # How old (in seconds) a reading can be before we consider
-# it no longer valid for our purposes
-max_age = 15.0
+# it no longer valid for display purposes
+max_age = 60
 
 # How old (in seconds) an aircraft data db entry can be before
-# we remove it from the database
+# we completely remove it from the database
+#TOO_DARN_OLD=60	# TEST VALUE!
+#TOO_DARN_OLD=120	# TEST VALUE!
 TOO_DARN_OLD=22500	# (NOTE: 22500 = 6.25 hours) - This is arbitrary, but was
 			# developed by calculating how long it would take a UAV that
 			# was flying at 80 mph to cross a 500 mile wide receiver
@@ -204,9 +206,8 @@ conn.commit()
 ############ CAUTION! #############
 ############ CAUTION! #############
 ## DELETE ALL DATABASE RECORDS, as we're just launching the tool....?
-##c.execute("DELETE FROM {tn}".format(tn=table_name1))
-##id_exists = c.fetchall()
-##conn.commit()
+#c.execute("DELETE FROM {tn}".format(tn=table_name1))
+#conn.commit()
 ############ CAUTION! #############
 ############ CAUTION! #############
 ############ CAUTION! #############
@@ -330,7 +331,7 @@ while (should_continue == 1):
     # AGE=NSN
     if (AGE == NSN):
         # No data, so advance this entry's age by SLEEP_INTERVAL duration
-        c.execute("UPDATE {tn} SET {cn}={cn}+".format(tn=table_name1, cn=age_column) + SLEEP_INTERVAL + " WHERE {idf}='".format(idf=key_field) + ICAO + "')")
+        c.execute("UPDATE {tn} SET {cn}={cn}+".format(tn=table_name1, cn=age_field) + SLEEP_INTERVAL + " WHERE {idf}='".format(idf=key_field) + ICAO + "')")
     else:
         # There is data, so use it
         c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=age_field) + str(AGE) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
@@ -352,7 +353,7 @@ while (should_continue == 1):
 
   ## Purge all records older than "too old to use"
   c.execute("DELETE FROM {tn} WHERE {af} > {tdo} and {af} <> {nsn}".format(tn=table_name1, af=age_field, tdo=TOO_DARN_OLD, nsn=NSN))
-  id_exists = c.fetchall()
+  #id_exists = c.fetchall()
   conn.commit()
 
   ## Get all data from the database in max-range order, desc
@@ -362,10 +363,6 @@ while (should_continue == 1):
   for icao_data in id_exists:
 
     ICAO=format(icao_data[0])
-
-    # If AGE too old, continue
-
-    # Display this ICAO's data
 
 
 ################################
@@ -416,7 +413,8 @@ while (should_continue == 1):
 
 
 
-    # Don't want to use information that is "too old"
+    # If AGE too old, continue
+    # Don't want to display information that is "too old"
     if (AGE > max_age):
         continue
 
@@ -432,6 +430,8 @@ while (should_continue == 1):
         else:
             sys.stdout.write('    ')
 
+
+    # Display this ICAO's data
 
     #print "%7s|%8s|%6s|%4s|%4s|%11s|%11s|%6s|%5s|%6s" % '{:7s}'.format(ICAO), '{:8s}'.format(CALLSIGN), '{:6s}'.format(LEVEL), '{:4s}'.format(GSPD), '{:4s}'.format(TRACK), '{:11s}'.format(LAT), '{:6s}'.format(LON), '{:5s}'.format(VERT_RATE), '{:6s}'.format(SQUAWK), '{:xs}'.format(RSSI)
     sys.stdout.write('{:7s}'.format(ICAO))
@@ -512,6 +512,11 @@ while (should_continue == 1):
   sys.stdout.flush()
   subprocess.call('tput home',shell=True)
   time.sleep(SLEEP_INTERVAL)
+
+  # All db entries are now SLEEP_INTERVAL older!
+  c.execute("UPDATE {tn} SET {cn}={cn}+{si}".format(tn=table_name1, cn=age_field, si=SLEEP_INTERVAL))
+  conn.commit()
+
 # End of while should_continue...
 
 conn.commit()
