@@ -92,6 +92,12 @@ EMAIL CHAIN DESCRIBING THE TOOLS AND THEIR USE FOLLOWS
 > daemon (or reboot your pi), and "ason" should be able to remotely grab
 > all the data it needs!
 > 
+> 
+> A Python version of the "ason" tool is pyson.py - It's a work in progress.
+> For right now it doesn't have arguments. I will update these instructons
+> as soon as I add the arguments.
+> 
+> 
 > Enjoy!
 > 
 > 

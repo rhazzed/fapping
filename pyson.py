@@ -11,7 +11,12 @@ import sys
 import urllib, json
 
 
+# "No Such Number" - Until I can figure out how to filter out non-existent dictionary entries,
+# this will be my signal that a dictionary had no value at a given key
+NSN=424242424242
+
 KEY_ICAO='hex'
+KEY_CALLSIGN='flight'
 KEY_LEVEL='altitude'
 KEY_GSPD='speed'
 KEY_TRACK='track'
@@ -21,39 +26,90 @@ KEY_VERT_RATE='vert_rate'
 KEY_SQUAWK='squawk'
 KEY_RSSI='rssi'
 
-url = "http://192.168.2.117:8080/aircraft.json"
+
+print "\n  ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI       "
+
+url = "http://192.168.2.127:8080/aircraft.json"
 response = urllib.urlopen(url)
 d = json.loads(response.read())['aircraft']
-print '\n'
+#print '\n'
 #print d
-print 'Length of dictionary: %d\n' % len(d)
-print '\n'
+#print 'Length of dictionary: %d\n' % len(d)
+#print '\n'
 for line in d:
-    print '\n\nRead line - %s' % line
+    #print '\nRead line - %s' % line
     #for key in line:
     #   print 'key = %s   ' % key
     #   print 'value = %s\n' % line[key]
 
 
-    print '\nFORMATTED -'
+    #print '\nFORMATTED -'
     ICAO = str(line.get(KEY_ICAO, '')).upper()
-    print '\tICAO = %s' % ICAO
-    LEVEL = line.get(KEY_LEVEL, '')
-    print '\tLEVEL = %s' % LEVEL
-    GSPD = line.get(KEY_GSPD, '')
-    print '\tGSPD = %s' % GSPD
-    TRACK = line.get(KEY_TRACK, '')
-    print '\tTRACK = %s' % TRACK
-    LAT = line.get(KEY_LAT, '')
-    print '\tLAT = %s' % LAT
-    LON = line.get(KEY_LON, '')
-    print '\tLON = %s' % LON
-    VERT_RATE = line.get(KEY_VERT_RATE, '')
-    print '\tVERT_RATE = %s' % VERT_RATE
-    SQUAWK= line.get(KEY_SQUAWK, '')
-    print '\tSQUAWK = %s' % SQUAWK
-    RSSI = line.get(KEY_RSSI, '')
-    print '\tRSSI = %s' % RSSI
+    #print '\tICAO = %s' % ICAO
+    CALLSIGN = str(line.get(KEY_CALLSIGN, '')).upper()
+    #print '\tCALLSIGN = %s' % CALLSIGN
+    LEVEL = line.get(KEY_LEVEL, NSN)
+    #print '\tLEVEL = %s' % LEVEL
+    GSPD = line.get(KEY_GSPD, NSN)
+    #print '\tGSPD = %s' % GSPD
+    TRACK = line.get(KEY_TRACK, NSN)
+    #print '\tTRACK = %s' % TRACK
+    LAT = line.get(KEY_LAT, NSN)
+    #print '\tLAT = %s' % LAT
+    LON = line.get(KEY_LON, NSN)
+    #print '\tLON = %s' % LON
+    VERT_RATE = line.get(KEY_VERT_RATE, NSN)
+    #print '\tVERT_RATE = %s' % VERT_RATE
+    SQUAWK= line.get(KEY_SQUAWK, NSN)
+    #print '\tSQUAWK = %s' % SQUAWK
+    RSSI = line.get(KEY_RSSI, NSN)
+    #print '\tRSSI = %s' % RSSI
+
+    #print "%7s|%8s|%6s|%4s|%4s|%11s|%11s|%6s|%5s|%6s" % '{:7s}'.format(ICAO), '{:8s}'.format(CALLSIGN), '{:6s}'.format(LEVEL), '{:4s}'.format(GSPD), '{:4s}'.format(TRACK), '{:11s}'.format(LAT), '{:6s}'.format(LON), '{:5s}'.format(VERT_RATE), '{:6s}'.format(SQUAWK), '{:xs}'.format(RSSI)
+    sys.stdout.write('{:7s}'.format(ICAO))
+    sys.stdout.write('|')
+    sys.stdout.write('{:8s}'.format(CALLSIGN))
+    sys.stdout.write('|')
+    if (LEVEL != NSN):
+        sys.stdout.write('{:6d}'.format(LEVEL))
+    else:
+        sys.stdout.write('{:6s}'.format(''))
+    sys.stdout.write('|')
+    if (GSPD!= NSN):
+        sys.stdout.write('{:4d}'.format(GSPD))
+    else:
+        sys.stdout.write('{:4s}'.format(''))
+    sys.stdout.write('|')
+    if (TRACK != NSN):
+        sys.stdout.write('{:4d}'.format(TRACK))
+    else:
+        sys.stdout.write('{:4s}'.format(''))
+    sys.stdout.write('|')
+
+    # TO-DO: CONVERT LAT+LONG into RANGE (nm)
+    #sys.stdout.write('{:4d}'.format(RANGE))
+    sys.stdout.write('{:-6.1f}'.format(999.9))
+
+    sys.stdout.write('|')
+    if (VERT_RATE != NSN):
+        sys.stdout.write('{:6d}'.format(VERT_RATE))
+    else:
+        sys.stdout.write('{:6s}'.format(''))
+    sys.stdout.write('|')
+    if (SQUAWK != NSN):
+        sys.stdout.write('{:5s}'.format(SQUAWK))
+    else:
+        sys.stdout.write('{:5s}'.format(''))
+    sys.stdout.write('|')
+    if (RSSI != NSN):
+        sys.stdout.write('{:-2.1f}'.format(RSSI))
+    else:
+        sys.stdout.write('{:i6s}'.format(''))
+
+    sys.stdout.write('\n')
+
+    #instr = "{0} {1} {2} {3} {4} {5} {6} {7} {8} {9}".format(ICAO, CALLSIGN, LEVEL, GSPD, TRACK, LAT, LON, VERT_RATE, SQUAWK, RSSI)
+    #print instr
 
 #   ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI       ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI  
 #   if (NR > 1) printf "%7s|%8s|%6s|%4s|%4s|%6.1f|%6s|%5s|%6s", toupper(ICAO), CALLSIGN, LEVEL, GSPD, TRACK, RANGE, VERT_RATE, SQUAWK, RSSI
