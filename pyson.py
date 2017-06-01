@@ -5,11 +5,14 @@
 # HISTORICAL INFORMATION -
 #
 #  2017-05-31  msipin  Created.
+#  2017-06-01  msipin  Built database from received data. Used that to produce display, rather
+#                      than using only the last-received message's data
 ############################################
 
 import sys, math, time
 import urllib, json
 import subprocess
+import sqlite3
 
 
 # "No Such Number" - Until I can figure out how to filter out non-existent dictionary entries,
@@ -96,6 +99,77 @@ IP_ADDR=sys.argv[1]
 
 
 
+# Create or open the database
+sqlite_file = '/var/tmp/pyson_db.sqlite'
+conn = sqlite3.connect(sqlite_file)
+c = conn.cursor()
+
+table_name1 = 'airplanes'
+key_field = KEY_ICAO # name of the column
+key_field_type = 'STRING'  # column data type
+callsign_field = KEY_CALLSIGN # name of the column
+callsign_field_type = 'STRING'  # column data type
+level_field = KEY_LEVEL # name of the column
+level_field_type = 'INTEGER'  # column data type
+gspd_field = KEY_GSPD # name of the column
+gspd_field_type = 'INTEGER'  # column data type
+track_field = KEY_TRACK # name of the column
+track_field_type = 'INTEGER'  # column data type
+vert_rate_field = KEY_VERT_RATE # name of the column
+vert_rate_field_type = 'INTEGER'  # column data type
+squawk_field = KEY_SQUAWK # name of the column
+squawk_field_type = 'INTEGER'  # column data type
+age_field = KEY_AGE # name of the column
+age_field_type = 'INTEGER'  # column data type
+
+
+# Creating a second table with 1 column and set it as PRIMARY KEY
+# note that PRIMARY KEY column must consist of unique values!
+try:
+    c.execute('CREATE TABLE {tn} ({nf} {ft} PRIMARY KEY)'\
+        .format(tn=table_name1, nf=key_field, ft=key_field_type))
+    # Add CALLSIGN column with a default row value
+    c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'"\
+        .format(tn=table_name1, cn=callsign_field, ct=callsign_field_type, df=''))
+
+# *** vartype = INTEGER *** -
+# LEVEL=NSN
+    # Add LEVEL column with a default row value
+    c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'"\
+        .format(tn=table_name1, cn=level_field, ct=level_field_type, df=NSN))
+# GSPD=NSN
+    # Add GSPD column with a default row value
+    c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'"\
+        .format(tn=table_name1, cn=gspd_field, ct=gspd_field_type, df=NSN))
+# TRACK=NSN
+    # Add TRACK column with a default row value
+    c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'"\
+        .format(tn=table_name1, cn=track_field, ct=track_field_type, df=NSN))
+# VERT_RATE=NSN
+    # Add VERT_RATE column with a default row value
+    c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'"\
+        .format(tn=table_name1, cn=vert_rate_field, ct=vert_rate_field_type, df=NSN))
+# SQUAWK=NSN
+    # Add SQUAWK column with a default row value
+    c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'"\
+        .format(tn=table_name1, cn=squawk_field, ct=squawk_field_type, df=NSN))
+# AGE=NSN
+    # Add AGE column with a default row value
+    c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'"\
+        .format(tn=table_name1, cn=age_field, ct=age_field_type, df=NSN))
+
+# *** vartype = FLOAT *** -
+# RSSI=NSN
+# LAT=NSN
+# LON=NSN
+# RANGE=NSN
+
+
+except sqlite3.OperationalError:
+    pass
+
+# Commit the database changes
+conn.commit()
 
 
 
@@ -118,9 +192,9 @@ url = "http://" + IP_ADDR + ":8080/receiver.json"
 response = urllib.urlopen(url)
 line = json.loads(response.read())
 RX_LAT = line.get(KEY_LAT, NSN)
-print '\tRX_LAT = %s' % RX_LAT
+#print '\tRX_LAT = %s' % RX_LAT
 RX_LON = line.get(KEY_LON, NSN)
-print '\tRX_LON = %s' % RX_LON
+#print '\tRX_LON = %s' % RX_LON
 
 if ((RX_LAT == NSN) | (RX_LON == NSN)):
     print '\nERROR: Receiver location unknown.\nExiting!'
@@ -134,6 +208,7 @@ subprocess.call('tput clear',shell=True)
 while (should_continue == 1):
 
   subprocess.call('tput home',shell=True)
+  conn.commit()
   planes_shown=0
 
   print "  ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI        ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI       "
@@ -189,6 +264,34 @@ while (should_continue == 1):
 
         # Calculate the approximate range (in nautical miles)
         RANGE=math.sqrt((LAT_DELTA_MILES*LAT_DELTA_MILES)+(LON_DELTA_MILES*LON_DELTA_MILES))*0.868976
+
+
+    # Insert (if doesn't exist already) ICAO entry in the db
+    c.execute("INSERT OR IGNORE INTO {tn} ({idf}) VALUES ('".format(tn=table_name1, idf=key_field) + ICAO + "')")
+
+    # CALLSIGN
+    if (CALLSIGN != ''):
+        c.execute("UPDATE {tn} SET {cn}=('".format(tn=table_name1, cn=callsign_field) + CALLSIGN + "') WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
+    # LEVEL 
+    if (LEVEL != NSN):
+        c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=level_field) + str(LEVEL) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
+    # GSPD
+    if (GSPD != NSN):
+        c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=gspd_field) + str(GSPD) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
+    # TRACK
+    if (TRACK != NSN):
+        c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=track_field) + str(TRACK) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
+    # VERT_RATE=NSN
+    if (VERT_RATE != NSN):
+        c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=vert_rate_field) + str(VERT_RATE) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
+    # SQUAWK=NSN
+    if (SQUAWK != NSN):
+        c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=squawk_field) + str(SQUAWK) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
+    # AGE=NSN
+    if (AGE != NSN):
+        c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=age_field) + str(AGE) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
+
+
 
 
     # Don't want to use information that is "too old"
@@ -274,6 +377,9 @@ while (should_continue == 1):
   subprocess.call('tput home',shell=True)
   time.sleep(4)
 # End of while should_continue...
+
+conn.commit()
+conn.close()
 
 raise SystemExit
 
