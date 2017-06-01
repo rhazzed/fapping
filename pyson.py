@@ -47,7 +47,7 @@ AGE=NSN
 
 # How old (in seconds) a reading can be before we consider
 # it no longer valid for display purposes
-max_age = 60
+max_age = 120
 
 # How old (in seconds) an aircraft data db entry can be before
 # we completely remove it from the database
@@ -315,7 +315,7 @@ while (should_continue == 1):
         c.execute("UPDATE {tn} SET {cn}=('".format(tn=table_name1, cn=callsign_field) + CALLSIGN + "') WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
     # LEVEL 
     if (LEVEL != NSN):
-        c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=level_field) + str(LEVEL) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
+        c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=level_field) + str(int(LEVEL)) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
     # GSPD
     if (GSPD != NSN):
         c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=gspd_field) + str(GSPD) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
@@ -439,7 +439,7 @@ while (should_continue == 1):
     sys.stdout.write('{:8s}'.format(CALLSIGN))
     sys.stdout.write('|')
     if (LEVEL != NSN):
-        if (LEVEL == 'ground'):
+        if ((LEVEL == 'ground') | (LEVEL == '0')):
             sys.stdout.write('{:6s}'.format('ground'))
         else:
             sys.stdout.write('{:6d}'.format(LEVEL))
