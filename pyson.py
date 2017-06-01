@@ -271,6 +271,7 @@ while (should_continue == 1):
 
 
   sys.stdout.flush()
+  subprocess.call('tput home',shell=True)
   time.sleep(4)
 # End of while should_continue...
 
