@@ -49,6 +49,13 @@ AGE=NSN
 # it no longer valid for our purposes
 max_age = 15.0
 
+# How old (in seconds) an aircraft data db entry can be before
+# we remove it from the database
+TOO_DARN_OLD=22500	# (NOTE: 22500 = 6.25 hours) - This is arbitrary, but was
+			# developed by calculating how long it would take a UAV that
+			# was flying at 80 mph to cross a 500 mile wide receiver
+			# field-of-view.  (Why? Because... science!....not)
+
 SLEEP_INTERVAL=4
 
 def init_display_vars():
@@ -192,6 +199,19 @@ conn.commit()
 
 
 
+############ CAUTION! #############
+############ CAUTION! #############
+############ CAUTION! #############
+############ CAUTION! #############
+## DELETE ALL DATABASE RECORDS, as we're just launching the tool....?
+##c.execute("DELETE FROM {tn}".format(tn=table_name1))
+##id_exists = c.fetchall()
+##conn.commit()
+############ CAUTION! #############
+############ CAUTION! #############
+############ CAUTION! #############
+############ CAUTION! #############
+
 
 
 # TO FIND OUT THE NUMBER OF LINES AVAILABLE ON THE SCREEN -
@@ -326,10 +346,14 @@ while (should_continue == 1):
     # RANGE=NSN
     if (RANGE != NSN):
         c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=range_field) + str(RANGE) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
-    conn.commit()
-
   ############# END OF PARSING ALL URL DATA  ###############
+  conn.commit()
 
+
+  ## Purge all records older than "too old to use"
+  c.execute("DELETE FROM {tn} WHERE {af} > {tdo} and {af} <> {nsn}".format(tn=table_name1, af=age_field, tdo=TOO_DARN_OLD, nsn=NSN))
+  id_exists = c.fetchall()
+  conn.commit()
 
   ## Get all data from the database in max-range order, desc
   #retrieve-all-ICAOs-ordered by max-range descending
