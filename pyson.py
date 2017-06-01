@@ -314,8 +314,10 @@ while (should_continue == 1):
     if (CALLSIGN != ''):
         c.execute("UPDATE {tn} SET {cn}=('".format(tn=table_name1, cn=callsign_field) + CALLSIGN + "') WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
     # LEVEL 
-    if (LEVEL != NSN):
-        c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=level_field) + str(int(LEVEL)) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
+    if (LEVEL == 'ground'):
+        c.execute("UPDATE {tn} SET {cn}=0".format(tn=table_name1, cn=level_field) + " WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
+    elif (LEVEL != NSN):
+        c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=level_field) + str(LEVEL) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
     # GSPD
     if (GSPD != NSN):
         c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=gspd_field) + str(GSPD) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
