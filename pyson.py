@@ -7,7 +7,7 @@
 #  2017-05-31  msipin  Created.
 ############################################
 
-import sys
+import sys, math
 import urllib, json
 
 
@@ -26,8 +26,30 @@ KEY_VERT_RATE='vert_rate'
 KEY_SQUAWK='squawk'
 KEY_RSSI='rssi'
 
+# (Approx.) Miles-per-degree of latitude/longitude - accuracy is
+# not as important; only being used for rough estimation
+# of RANGE
+mpd_lat = 69.0535	# Avg, equator-to-pole
+mpd_lon = 53.0000	# At 40 degrees N/S
 
-print "\n  ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI       "
+
+
+# Pickup receiver lat/lon
+# { "version" : "3.5.0", "refresh" : 1000, "history" : 120, "lat" : 34.492610, "lon" : -117.407060 }
+url = "http://192.168.2.127:8080/receiver.json"
+response = urllib.urlopen(url)
+line = json.loads(response.read())
+RX_LAT = line.get(KEY_LAT, NSN)
+print '\tRX_LAT = %s' % RX_LAT
+RX_LON = line.get(KEY_LON, NSN)
+print '\tRX_LON = %s' % RX_LON
+
+if ((RX_LAT == NSN) | (RX_LON == NSN)):
+    print '\nERROR: Receiver location unknown.\nExiting!'
+    raise SystemExit
+
+
+print "\n  ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI        ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI       "
 
 url = "http://192.168.2.127:8080/aircraft.json"
 response = urllib.urlopen(url)
@@ -36,7 +58,11 @@ d = json.loads(response.read())['aircraft']
 #print d
 #print 'Length of dictionary: %d\n' % len(d)
 #print '\n'
+loop=0
 for line in d:
+
+    loop=loop+1
+
     #print '\nRead line - %s' % line
     #for key in line:
     #   print 'key = %s   ' % key
@@ -88,7 +114,24 @@ for line in d:
 
     # TO-DO: CONVERT LAT+LONG into RANGE (nm)
     #sys.stdout.write('{:4d}'.format(RANGE))
-    sys.stdout.write('{:-6.1f}'.format(999.9))
+    RANGE=NSN
+    if ((LAT != NSN) & (LON != NSN)):
+        DLAT=RX_LAT-LAT
+        # Calculate approximate distance (in miles) of delta in latitude
+        LAT_DELTA_MILES=DLAT*mpd_lat
+
+        DLON=RX_LON-LON
+        # Calculate approximate distance (in miles) of delta in longitude
+        LON_DELTA_MILES=DLON*mpd_lon
+
+        # Calculate the approximate range (in nautical miles)
+        RANGE=math.sqrt((LAT_DELTA_MILES*LAT_DELTA_MILES)+(LON_DELTA_MILES*LON_DELTA_MILES))*0.868976
+
+
+    if (RANGE != NSN):
+        sys.stdout.write('{:-6.1f}'.format(RANGE))
+    else:
+        sys.stdout.write('{:6s}'.format(''))
 
     sys.stdout.write('|')
     if (VERT_RATE != NSN):
@@ -102,11 +145,14 @@ for line in d:
         sys.stdout.write('{:5s}'.format(''))
     sys.stdout.write('|')
     if (RSSI != NSN):
-        sys.stdout.write('{:-2.1f}'.format(RSSI))
+        sys.stdout.write('{:6s}'.format(str(('{:-2.1f}'.format(RSSI)))))
     else:
-        sys.stdout.write('{:i6s}'.format(''))
+        sys.stdout.write('{:6s}'.format(''))
 
-    sys.stdout.write('\n')
+    if ((loop % 2) == 0):
+        sys.stdout.write('\n')
+    else:
+        sys.stdout.write('    ')
 
     #instr = "{0} {1} {2} {3} {4} {5} {6} {7} {8} {9}".format(ICAO, CALLSIGN, LEVEL, GSPD, TRACK, LAT, LON, VERT_RATE, SQUAWK, RSSI)
     #print instr
