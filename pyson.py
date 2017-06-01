@@ -41,13 +41,15 @@ LAT=NSN
 LON=NSN
 VERT_RATE=NSN
 SQUAWK=NSN
-RSSI =NSN
+RSSI=NSN
 RANGE=NSN
 AGE=NSN
 
 # How old (in seconds) a reading can be before we consider
 # it no longer valid for our purposes
 max_age = 15.0
+
+SLEEP_INTERVAL=4
 
 def init_display_vars():
     global ICAO
@@ -121,6 +123,14 @@ squawk_field = KEY_SQUAWK # name of the column
 squawk_field_type = 'INTEGER'  # column data type
 age_field = KEY_AGE # name of the column
 age_field_type = 'INTEGER'  # column data type
+rssi_field = KEY_RSSI # name of the column
+rssi_field_type = 'FLOAT'  # column data type
+lat_field = KEY_LAT # name of the column
+lat_field_type = 'FLOAT'  # column data type
+lon_field = KEY_LON # name of the column
+lon_field_type = 'FLOAT'  # column data type
+range_field = KEY_LON # name of the column
+range_field_type = 'FLOAT'  # column data type
 
 
 # Creating a second table with 1 column and set it as PRIMARY KEY
@@ -160,9 +170,18 @@ try:
 
 # *** vartype = FLOAT *** -
 # RSSI=NSN
+    # Add RSSI column with a default row value
+    c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'"\
+        .format(tn=table_name1, cn=rssi_field, ct=rssi_field_type, df=NSN))
 # LAT=NSN
+    c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'"\
+        .format(tn=table_name1, cn=lat_field, ct=lat_field_type, df=NSN))
 # LON=NSN
+    c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'"\
+        .format(tn=table_name1, cn=lon_field, ct=lon_field_type, df=NSN))
 # RANGE=NSN
+    c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'"\
+        .format(tn=table_name1, cn=range_field, ct=range_field_type, df=NSN))
 
 
 except sqlite3.OperationalError:
@@ -288,8 +307,24 @@ while (should_continue == 1):
     if (SQUAWK != NSN):
         c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=squawk_field) + str(SQUAWK) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
     # AGE=NSN
-    if (AGE != NSN):
+    if (AGE == NSN):
+        # No data, so advance this entry's age by SLEEP_INTERVAL duration
+        c.execute("UPDATE {tn} SET {cn}={cn}+".format(tn=table_name1, cn=age_column) + SLEEP_INTERVAL + " WHERE {idf}='".format(idf=key_field) + ICAO + "')")
+    else:
+        # There is data, so use it
         c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=age_field) + str(AGE) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
+    # RSSI=NSN
+    if (RSSI != NSN):
+        c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=rssi_field) + str(RSSI) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
+    # LAT=NSN
+    if (LAT != NSN):
+        c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=lat_field) + str(LAT) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
+    # LON=NSN
+    if (LON != NSN):
+        c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=lon_field) + str(LON) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
+    # RANGE=NSN
+    if (RANGE != NSN):
+        c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=range_field) + str(RANGE) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
 
 
 
@@ -375,7 +410,7 @@ while (should_continue == 1):
 
   sys.stdout.flush()
   subprocess.call('tput home',shell=True)
-  time.sleep(4)
+  time.sleep(SLEEP_INTERVAL)
 # End of while should_continue...
 
 conn.commit()
