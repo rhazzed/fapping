@@ -9,7 +9,7 @@
 
 import sys, math, time
 import urllib, json
-import subprocess as sp
+import subprocess
 
 
 # "No Such Number" - Until I can figure out how to filter out non-existent dictionary entries,
@@ -35,6 +35,17 @@ mpd_lon = 53.0000	# At 40 degrees N/S
 
 
 
+# TO FIND OUT THE NUMBER OF LINES AVAILABLE ON THE SCREEN -
+cmd='echo "lines"|tput -S'
+result = subprocess.check_output(cmd, shell=True)
+lines_to_display=int(result)-2
+#`echo "cols"|tput -S`
+##print "Number of screen lines = %d" % lines_to_display
+##print "Screen height = %s" % height
+
+
+
+
 # Pickup receiver lat/lon
 # { "version" : "3.5.0", "refresh" : 1000, "history" : 120, "lat" : 34.492610, "lon" : -117.407060 }
 url = "http://192.168.2.127:8080/receiver.json"
@@ -52,7 +63,7 @@ if ((RX_LAT == NSN) | (RX_LON == NSN)):
 
 should_continue=1
 while (should_continue == 1):
-  sp.call('tput clear',shell=True)
+  subprocess.call('tput clear',shell=True)
   print "  ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI        ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI       "
 
   url = "http://192.168.2.127:8080/aircraft.json"
@@ -63,6 +74,7 @@ while (should_continue == 1):
   #print 'Length of dictionary: %d\n' % len(d)
   #print '\n'
   loop=0
+  lines_displayed=0
   for line in d:
 
     loop=loop+1
@@ -95,29 +107,7 @@ while (should_continue == 1):
     RSSI = line.get(KEY_RSSI, NSN)
     #print '\tRSSI = %s' % RSSI
 
-    #print "%7s|%8s|%6s|%4s|%4s|%11s|%11s|%6s|%5s|%6s" % '{:7s}'.format(ICAO), '{:8s}'.format(CALLSIGN), '{:6s}'.format(LEVEL), '{:4s}'.format(GSPD), '{:4s}'.format(TRACK), '{:11s}'.format(LAT), '{:6s}'.format(LON), '{:5s}'.format(VERT_RATE), '{:6s}'.format(SQUAWK), '{:xs}'.format(RSSI)
-    sys.stdout.write('{:7s}'.format(ICAO))
-    sys.stdout.write('|')
-    sys.stdout.write('{:8s}'.format(CALLSIGN))
-    sys.stdout.write('|')
-    if (LEVEL != NSN):
-        sys.stdout.write('{:6d}'.format(LEVEL))
-    else:
-        sys.stdout.write('{:6s}'.format(''))
-    sys.stdout.write('|')
-    if (GSPD!= NSN):
-        sys.stdout.write('{:4d}'.format(GSPD))
-    else:
-        sys.stdout.write('{:4s}'.format(''))
-    sys.stdout.write('|')
-    if (TRACK != NSN):
-        sys.stdout.write('{:4d}'.format(TRACK))
-    else:
-        sys.stdout.write('{:4s}'.format(''))
-    sys.stdout.write('|')
-
-    # TO-DO: CONVERT LAT+LONG into RANGE (nm)
-    #sys.stdout.write('{:4d}'.format(RANGE))
+    # CONVERT LAT+LONG into RANGE (nm)
     RANGE=NSN
     if ((LAT != NSN) & (LON != NSN)):
         DLAT=RX_LAT-LAT
@@ -131,12 +121,37 @@ while (should_continue == 1):
         # Calculate the approximate range (in nautical miles)
         RANGE=math.sqrt((LAT_DELTA_MILES*LAT_DELTA_MILES)+(LON_DELTA_MILES*LON_DELTA_MILES))*0.868976
 
+    # If there is more to display than we have room to display, stop displaying it
+    if (lines_displayed >= lines_to_display):
+        break
 
+    #print "%7s|%8s|%6s|%4s|%4s|%11s|%11s|%6s|%5s|%6s" % '{:7s}'.format(ICAO), '{:8s}'.format(CALLSIGN), '{:6s}'.format(LEVEL), '{:4s}'.format(GSPD), '{:4s}'.format(TRACK), '{:11s}'.format(LAT), '{:6s}'.format(LON), '{:5s}'.format(VERT_RATE), '{:6s}'.format(SQUAWK), '{:xs}'.format(RSSI)
+    sys.stdout.write('{:7s}'.format(ICAO))
+    sys.stdout.write('|')
+    sys.stdout.write('{:8s}'.format(CALLSIGN))
+    sys.stdout.write('|')
+    if (LEVEL != NSN):
+        if (LEVEL == 'ground'):
+            sys.stdout.write('{:6s}'.format('ground'))
+        else:
+            sys.stdout.write('{:6d}'.format(LEVEL))
+    else:
+        sys.stdout.write('{:6s}'.format(''))
+    sys.stdout.write('|')
+    if (GSPD!= NSN):
+        sys.stdout.write('{:4d}'.format(GSPD))
+    else:
+        sys.stdout.write('{:4s}'.format(''))
+    sys.stdout.write('|')
+    if (TRACK != NSN):
+        sys.stdout.write('{:4d}'.format(TRACK))
+    else:
+        sys.stdout.write('{:4s}'.format(''))
+    sys.stdout.write('|')
     if (RANGE != NSN):
         sys.stdout.write('{:-6.1f}'.format(RANGE))
     else:
         sys.stdout.write('{:6s}'.format(''))
-
     sys.stdout.write('|')
     if (VERT_RATE != NSN):
         sys.stdout.write('{:6d}'.format(VERT_RATE))
@@ -155,6 +170,7 @@ while (should_continue == 1):
 
     if ((loop % 2) == 0):
         sys.stdout.write('\n')
+        lines_displayed=lines_displayed+1
     else:
         sys.stdout.write('    ')
 
