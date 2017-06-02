@@ -24,6 +24,13 @@ import sys, tty, termios
 KEYS_QUIT='q'
 KEYS_SORT_ICAO='i'
 KEYS_SORT_RANGE='r'
+KEYS_SORT_LEVEL='l'
+KEYS_SORT_GSPD='g'
+KEYS_SORT_VERT_RATE='v'
+KEYS_SORT_RSSI='d'
+KEYS_SORT_CALLSIGN='c'
+KEYS_SORT_SQUAWK='s'
+KEYS_SORT_TRACK='t'
 
 
 # "No Such Number" - Until I can figure out how to filter out non-existent dictionary entries,
@@ -269,10 +276,26 @@ if ((RX_LAT == NSN) | (RX_LON == NSN)):
 
 
 # Establish ORDER BY clauses, and pick one as the default
-ORDER_BY_RANGE_ASC=" {sf} ASC, {rssi} DESC".format(sf=range_field, rssi=rssi_field)
-ORDER_BY_RANGE_DESC=" {sf} DESC, {rssi} DESC".format(sf=range_field, rssi=rssi_field)
+ORDER_BY_RANGE_ASC=" {sf} ASC, {kf} DESC".format(sf=range_field, kf=key_field)
+ORDER_BY_RANGE_DESC=" {sf} DESC, {kf} DESC".format(sf=range_field, kf=key_field)
 ORDER_BY_ICAO_ASC=" {sf} ASC".format(sf=key_field)
 ORDER_BY_ICAO_DESC=" {sf} DESC".format(sf=key_field)
+ORDER_BY_LEVEL_ASC=" {sf} ASC, {kf} ASC".format(sf=level_field, kf=key_field)
+ORDER_BY_LEVEL_DESC=" {sf} DESC, {kf} ASC".format(sf=level_field, kf=key_field)
+ORDER_BY_GSPD_ASC=" {sf} ASC, {kf} ASC".format(sf=gspd_field, kf=key_field)
+ORDER_BY_GSPD_DESC=" {sf} DESC, {kf} ASC".format(sf=gspd_field, kf=key_field)
+ORDER_BY_VERT_RATE_ASC=" abs({sf}) ASC, {kf} ASC".format(sf=vert_rate_field, kf=key_field)
+ORDER_BY_VERT_RATE_DESC=" abs({sf}) DESC, {kf} ASC".format(sf=vert_rate_field, kf=key_field)
+ORDER_BY_RSSI_ASC=" {sf} ASC, {rf} DESC, {kf} ASC".format(sf=rssi_field, rf=range_field, kf=key_field)
+ORDER_BY_RSSI_DESC=" {sf} DESC, {rf} ASC, {kf} ASC".format(sf=rssi_field, rf=range_field, kf=key_field)
+ORDER_BY_CALLSIGN_ASC=" {sf} ASC, {kf} ASC".format(sf=callsign_field, kf=key_field)
+ORDER_BY_CALLSIGN_DESC=" {sf} DESC, {kf} ASC".format(sf=callsign_field, kf=key_field)
+ORDER_BY_SQUAWK_ASC=" {sf} ASC, {kf} ASC".format(sf=squawk_field, kf=key_field)
+ORDER_BY_SQUAWK_DESC=" {sf} DESC, {kf} ASC".format(sf=squawk_field, kf=key_field)
+ORDER_BY_TRACK_ASC=" {sf} ASC, {kf} ASC".format(sf=track_field, kf=key_field)
+ORDER_BY_TRACK_DESC=" {sf} DESC, {kf} ASC".format(sf=track_field, kf=key_field)
+
+# Establish the default ORDER BY clause -
 ORDER_BY_CLAUSE=ORDER_BY_RANGE_DESC
 
 
@@ -287,7 +310,7 @@ while (should_continue == 1):
   conn.commit()
   planes_shown=0
 
-  print "  ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI        ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI       \r"
+  print "  ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK | dbm        ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK | dbm       \r"
 
   url = "http://" + IP_ADDR + ":8080/aircraft.json"
   response = urllib.urlopen(url)
@@ -567,13 +590,69 @@ while (should_continue == 1):
           else:
               ORDER_BY_CLAUSE=ORDER_BY_ICAO_ASC
       elif (s == KEYS_SORT_RANGE):
-          # Change order by clause to RANGE, DESC
+          # Change order by clause to RANGE, ASC
           if (ORDER_BY_CLAUSE == ORDER_BY_RANGE_ASC):
               ORDER_BY_CLAUSE=ORDER_BY_RANGE_DESC
           elif (ORDER_BY_CLAUSE == ORDER_BY_RANGE_DESC):
               ORDER_BY_CLAUSE=ORDER_BY_RANGE_ASC
           else:
-              ORDER_BY_CLAUSE=ORDER_BY_RANGE_DESC
+              ORDER_BY_CLAUSE=ORDER_BY_RANGE_ASC
+      elif (s == KEYS_SORT_LEVEL):
+          # Change order by clause to LEVEL, ASC
+          if (ORDER_BY_CLAUSE == ORDER_BY_LEVEL_ASC):
+              ORDER_BY_CLAUSE=ORDER_BY_LEVEL_DESC
+          elif (ORDER_BY_CLAUSE == ORDER_BY_LEVEL_DESC):
+              ORDER_BY_CLAUSE=ORDER_BY_LEVEL_ASC
+          else:
+              ORDER_BY_CLAUSE=ORDER_BY_LEVEL_ASC
+      elif (s == KEYS_SORT_GSPD):
+          # Change order by clause to GSPD, ASC
+          if (ORDER_BY_CLAUSE == ORDER_BY_GSPD_ASC):
+              ORDER_BY_CLAUSE=ORDER_BY_GSPD_DESC
+          elif (ORDER_BY_CLAUSE == ORDER_BY_GSPD_DESC):
+              ORDER_BY_CLAUSE=ORDER_BY_GSPD_ASC
+          else:
+              ORDER_BY_CLAUSE=ORDER_BY_GSPD_ASC
+      elif (s == KEYS_SORT_VERT_RATE):
+          # Change order by clause to VERT_RATE-delta, ASC
+          if (ORDER_BY_CLAUSE == ORDER_BY_VERT_RATE_ASC):
+              ORDER_BY_CLAUSE=ORDER_BY_VERT_RATE_DESC
+          elif (ORDER_BY_CLAUSE == ORDER_BY_VERT_RATE_DESC):
+              ORDER_BY_CLAUSE=ORDER_BY_VERT_RATE_ASC
+          else:
+              ORDER_BY_CLAUSE=ORDER_BY_VERT_RATE_ASC
+      elif (s == KEYS_SORT_RSSI):
+          # Change order by clause to RSSI, ASC
+          if (ORDER_BY_CLAUSE == ORDER_BY_RSSI_ASC):
+              ORDER_BY_CLAUSE=ORDER_BY_RSSI_DESC
+          elif (ORDER_BY_CLAUSE == ORDER_BY_RSSI_DESC):
+              ORDER_BY_CLAUSE=ORDER_BY_RSSI_ASC
+          else:
+              ORDER_BY_CLAUSE=ORDER_BY_RSSI_ASC
+      elif (s == KEYS_SORT_CALLSIGN):
+          # Change order by clause to CALLSIGN, ASC
+          if (ORDER_BY_CLAUSE == ORDER_BY_CALLSIGN_ASC):
+              ORDER_BY_CLAUSE=ORDER_BY_CALLSIGN_DESC
+          elif (ORDER_BY_CLAUSE == ORDER_BY_CALLSIGN_DESC):
+              ORDER_BY_CLAUSE=ORDER_BY_CALLSIGN_ASC
+          else:
+              ORDER_BY_CLAUSE=ORDER_BY_CALLSIGN_ASC
+      elif (s == KEYS_SORT_SQUAWK):
+          # Change order by clause to SQUAWK, ASC
+          if (ORDER_BY_CLAUSE == ORDER_BY_SQUAWK_ASC):
+              ORDER_BY_CLAUSE=ORDER_BY_SQUAWK_DESC
+          elif (ORDER_BY_CLAUSE == ORDER_BY_SQUAWK_DESC):
+              ORDER_BY_CLAUSE=ORDER_BY_SQUAWK_ASC
+          else:
+              ORDER_BY_CLAUSE=ORDER_BY_SQUAWK_ASC
+      elif (s == KEYS_SORT_TRACK):
+          # Change order by clause to TRACK, ASC
+          if (ORDER_BY_CLAUSE == ORDER_BY_TRACK_ASC):
+              ORDER_BY_CLAUSE=ORDER_BY_TRACK_DESC
+          elif (ORDER_BY_CLAUSE == ORDER_BY_TRACK_DESC):
+              ORDER_BY_CLAUSE=ORDER_BY_TRACK_ASC
+          else:
+              ORDER_BY_CLAUSE=ORDER_BY_TRACK_ASC
 
 
   # All db entries are now SLEEP_INTERVAL older!
