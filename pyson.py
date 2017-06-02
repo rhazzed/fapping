@@ -6,13 +6,21 @@
 #
 #  2017-05-31  msipin  Created.
 #  2017-06-01  msipin  Built database from received data. Used that to produce display, rather
-#                      than using only the last-received message's data
+#                      than using only the last-received message's data. Added keystroke-capture
+#                      in a separate thread (NOTE: Requires termios - can Winblows do that?)
 ############################################
 
 import sys, math, time
 import urllib, json
 import subprocess
 import sqlite3
+import getch
+import Queue
+import threading
+import time
+import sys
+import sys, tty, termios
+
 
 
 # "No Such Number" - Until I can figure out how to filter out non-existent dictionary entries,
@@ -87,6 +95,13 @@ def init_display_vars():
     RANGE=NSN
     AGE=NSN
 
+def get_key(q):
+   #print 'Press a key'
+   inkey = getch._Getch()
+   import sys
+   for i in xrange(sys.maxint):
+      k=inkey()
+      if k<>'':q.put(k)
 
 
 # (Approx.) Miles-per-degree of latitude/longitude - accuracy is
@@ -107,6 +122,15 @@ if (len(sys.argv) <2):
 # Pickup IP address
 IP_ADDR=sys.argv[1]
 
+# Pickup existing <stdin> environment
+fd = sys.stdin.fileno()
+old_settings = termios.tcgetattr(fd)
+
+# Start the keystroke-handling thread
+q = Queue.Queue()
+t = threading.Thread(target=get_key, args = (q,))
+t.daemon = True
+t.start()
 
 
 
@@ -251,7 +275,7 @@ while (should_continue == 1):
   conn.commit()
   planes_shown=0
 
-  print "  ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI        ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI       "
+  print "  ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI        ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI       \r"
 
   url = "http://" + IP_ADDR + ":8080/aircraft.json"
   response = urllib.urlopen(url)
@@ -411,7 +435,7 @@ while (should_continue == 1):
         AGE=id_exists[9]
         RANGE=id_exists[10]
     else:
-        print("\nNOTHING FOUND IN DB FOR ICAO = " + ICAO + "!")
+        print("\nNOTHING FOUND IN DB FOR ICAO = " + ICAO + "!\r")
 
 
 
@@ -428,7 +452,7 @@ while (should_continue == 1):
 
     if ((planes_shown > 0) & (planes_shown < max_planes_to_show)):
         if ((planes_shown % 2) == 0):
-            sys.stdout.write('\n')
+            sys.stdout.write('\r\n')
         else:
             sys.stdout.write('    ')
 
@@ -498,7 +522,7 @@ while (should_continue == 1):
   while (planes_shown < max_planes_to_show):
       # Newline -or- space
       if ((planes_shown % 2) == 0):
-          sys.stdout.write('\n')
+          sys.stdout.write('\r\n')
       else:
           sys.stdout.write('    ')
 
@@ -513,7 +537,16 @@ while (should_continue == 1):
 
   sys.stdout.flush()
   subprocess.call('tput home',shell=True)
-  time.sleep(SLEEP_INTERVAL)
+
+  # See if there are any keystrokes to read
+  if q.empty():
+      time.sleep(SLEEP_INTERVAL)
+  else:
+      s = q.get()
+      #print "Found {} in the queue!".format(s)
+      if (s == 'q'):
+          should_continue=0
+
 
   # All db entries are now SLEEP_INTERVAL older!
   c.execute("UPDATE {tn} SET {cn}={cn}+{si}".format(tn=table_name1, cn=age_field, si=SLEEP_INTERVAL))
@@ -523,6 +556,13 @@ while (should_continue == 1):
 
 conn.commit()
 conn.close()
+
+# Restore <stdin>'s terminal settings
+termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+# Move the cursor to the bottom of the screen
+lines_to_display=int(result)-1
+print("\033[{0};0H\r\n".format(lines_to_display))
 
 raise SystemExit
 
