@@ -310,7 +310,6 @@ while (should_continue == 1):
   conn.commit()
   planes_shown=0
 
-  print "  ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK | dbm        ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK | dbm       \r"
 
   url = "http://" + IP_ADDR + ":8080/aircraft.json"
   response = urllib.urlopen(url)
@@ -319,6 +318,7 @@ while (should_continue == 1):
   #print d
   #print 'Length of dictionary: %d\n' % len(d)
   #print '\n'
+
   ############# START OF PARSING ALL URL DATA  ###############
   for line in d:
 
@@ -421,6 +421,10 @@ while (should_continue == 1):
   #retrieve-all-ICAOs-ordered by max-range descending
   c.execute("SELECT {idf} FROM {tn} WHERE {sf} < {nsn} ORDER BY {obc}".format(idf=key_field, tn=table_name1, sf=range_field, nsn=NSN, obc=ORDER_BY_CLAUSE))
   id_exists = c.fetchall()
+
+
+  print "  ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK | dbm        ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK | dbm       \r"
+
   for icao_data in id_exists:
 
     ICAO=format(icao_data[0])
@@ -574,9 +578,12 @@ while (should_continue == 1):
   subprocess.call('tput home',shell=True)
 
   # See if there are any keystrokes to read
-  if q.empty():
-      time.sleep(SLEEP_INTERVAL)
-  else:
+  slept_for=0
+  check_after=0.5
+  while(q.empty() & (slept_for < SLEEP_INTERVAL)):
+      time.sleep(check_after)
+      slept_for=slept_for+check_after
+  if (q.empty() == False):
       s = q.get()
       #print "Found {} in the queue!".format(s)
       if (s == KEYS_QUIT):
