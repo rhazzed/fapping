@@ -8,6 +8,12 @@
 #  2017-06-01  msipin  Built database from received data. Used that to produce display, rather
 #                      than using only the last-received message's data. Added keystroke-capture
 #                      in a separate thread (NOTE: Requires termios - can Winblows do that?)
+#  2017-06-02  msipin  Major refactoring. Fixed hidden bug whereby the RANGE db field was called
+#                      "lon".  Still have a few TO-DOs. Some of the MAJOR ones are -
+#                      TO-DO: Stop certain ICAOs from being displayed as if they were number in
+#                             scientific notation
+#                      TO-DO: Remove so many dang GLOBAL VARIABLES
+#                      TO-DO: (there are more - search for "TO-DO:" in this code!)
 ############################################
 
 import sys, math, time
@@ -37,6 +43,7 @@ KEYS_SORT_TRACK='t'
 # this will be my signal that a dictionary had no value at a given key
 NSN=424242424242
 
+# JSON field names - as defined by PiAware's read-from-airplane-data-URL functionality
 KEY_ICAO='hex'
 KEY_CALLSIGN='flight'
 KEY_LEVEL='altitude'
@@ -49,7 +56,7 @@ KEY_SQUAWK='squawk'
 KEY_RSSI='rssi'
 KEY_AGE='seen'
 
-# Global variables
+# Global variables that will hold airplane attribute data (both for display and db writes/reads)
 ICAO=''
 CALLSIGN=''
 LEVEL=NSN
@@ -78,6 +85,65 @@ TOO_DARN_OLD=22500	# (NOTE: 22500 = 6.25 hours) - This is arbitrary, but was
 
 SLEEP_INTERVAL=4
 
+# SQLite db variables - table name, field names, field datatypes, primary key name (etc.)
+table_name1 = 'airplanes'
+key_field = KEY_ICAO # name of the column
+key_field_type = 'STRING'  # column data type
+callsign_field = KEY_CALLSIGN # name of the column
+callsign_field_type = 'STRING'  # column data type
+level_field = KEY_LEVEL # name of the column
+level_field_type = 'INTEGER'  # column data type
+gspd_field = KEY_GSPD # name of the column
+gspd_field_type = 'INTEGER'  # column data type
+track_field = KEY_TRACK # name of the column
+track_field_type = 'INTEGER'  # column data type
+vert_rate_field = KEY_VERT_RATE # name of the column
+vert_rate_field_type = 'INTEGER'  # column data type
+squawk_field = KEY_SQUAWK # name of the column
+squawk_field_type = 'INTEGER'  # column data type
+age_field = KEY_AGE # name of the column
+age_field_type = 'INTEGER'  # column data type
+rssi_field = KEY_RSSI # name of the column
+rssi_field_type = 'FLOAT'  # column data type
+lat_field = KEY_LAT # name of the column
+lat_field_type = 'FLOAT'  # column data type
+lon_field = KEY_LON # name of the column
+lon_field_type = 'FLOAT'  # column data type
+range_field = 'range' # name of the column
+range_field_type = 'FLOAT'  # column data type
+
+
+# Establish ORDER BY clauses, and pick one as the default
+ORDER_BY_RANGE_ASC=" {sf} ASC, {kf} DESC".format(sf=range_field, kf=key_field)
+ORDER_BY_RANGE_DESC=" {sf} DESC, {kf} DESC".format(sf=range_field, kf=key_field)
+ORDER_BY_ICAO_ASC=" {sf} ASC".format(sf=key_field)
+ORDER_BY_ICAO_DESC=" {sf} DESC".format(sf=key_field)
+ORDER_BY_LEVEL_ASC=" {sf} ASC, {kf} ASC".format(sf=level_field, kf=key_field)
+ORDER_BY_LEVEL_DESC=" {sf} DESC, {kf} ASC".format(sf=level_field, kf=key_field)
+ORDER_BY_GSPD_ASC=" {sf} ASC, {kf} ASC".format(sf=gspd_field, kf=key_field)
+ORDER_BY_GSPD_DESC=" {sf} DESC, {kf} ASC".format(sf=gspd_field, kf=key_field)
+ORDER_BY_VERT_RATE_ASC=" abs({sf}) ASC, {kf} ASC".format(sf=vert_rate_field, kf=key_field)
+ORDER_BY_VERT_RATE_DESC=" abs({sf}) DESC, {kf} ASC".format(sf=vert_rate_field, kf=key_field)
+ORDER_BY_RSSI_ASC=" {sf} ASC, {rf} DESC, {kf} ASC".format(sf=rssi_field, rf=range_field, kf=key_field)
+ORDER_BY_RSSI_DESC=" {sf} DESC, {rf} ASC, {kf} ASC".format(sf=rssi_field, rf=range_field, kf=key_field)
+ORDER_BY_CALLSIGN_ASC=" {sf} ASC, {kf} ASC".format(sf=callsign_field, kf=key_field)
+ORDER_BY_CALLSIGN_DESC=" {sf} DESC, {kf} ASC".format(sf=callsign_field, kf=key_field)
+ORDER_BY_SQUAWK_ASC=" {sf} ASC, {kf} ASC".format(sf=squawk_field, kf=key_field)
+ORDER_BY_SQUAWK_DESC=" {sf} DESC, {kf} ASC".format(sf=squawk_field, kf=key_field)
+ORDER_BY_TRACK_ASC=" {sf} ASC, {kf} ASC".format(sf=track_field, kf=key_field)
+ORDER_BY_TRACK_DESC=" {sf} DESC, {kf} ASC".format(sf=track_field, kf=key_field)
+
+# Establish the default ORDER BY clause -
+ORDER_BY_CLAUSE=ORDER_BY_RANGE_DESC
+
+
+
+
+
+
+
+
+
 def init_display_vars():
     global ICAO
     global CALLSIGN
@@ -105,6 +171,249 @@ def init_display_vars():
     RANGE=NSN
     AGE=NSN
 
+
+
+def _create_db_tables(conn2, c2):
+    global table_name1
+    global key_field
+    global key_field_type
+    global callsign_field
+    global callsign_field_type
+    global level_field
+    global level_field_type
+    global gspd_field
+    global gspd_field_type
+    global track_field
+    global track_field_type
+    global vert_rate_field
+    global vert_rate_field_type
+    global squawk_field
+    global squawk_field_type
+    global age_field
+    global age_field_type
+    global rssi_field
+    global rssi_field_type
+    global lat_field
+    global lat_field_type
+    global lon_field
+    global lon_field_type
+    global range_field
+    global range_field_type
+    global NSN
+
+    # Creating a table with 1 column and set it as PRIMARY KEY
+    # note that PRIMARY KEY column must consist of unique values!
+    try:
+        c2.execute('CREATE TABLE {tn} ({nf} {ft} PRIMARY KEY)' \
+                  .format(tn=table_name1, nf=key_field, ft=key_field_type))
+        # Add CALLSIGN column with a default row value
+        c2.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'" \
+                  .format(tn=table_name1, cn=callsign_field, ct=callsign_field_type, df=''))
+
+        # *** vartype = INTEGER *** -
+        # LEVEL=NSN
+        # Add LEVEL column with a default row value
+        c2.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'" \
+                  .format(tn=table_name1, cn=level_field, ct=level_field_type, df=NSN))
+        # GSPD=NSN
+        # Add GSPD column with a default row value
+        c2.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'" \
+                  .format(tn=table_name1, cn=gspd_field, ct=gspd_field_type, df=NSN))
+        # TRACK=NSN
+        # Add TRACK column with a default row value
+        c2.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'" \
+                  .format(tn=table_name1, cn=track_field, ct=track_field_type, df=NSN))
+        # VERT_RATE=NSN
+        # Add VERT_RATE column with a default row value
+        c2.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'" \
+                  .format(tn=table_name1, cn=vert_rate_field, ct=vert_rate_field_type, df=NSN))
+        # SQUAWK=NSN
+        # Add SQUAWK column with a default row value
+        c2.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'" \
+                  .format(tn=table_name1, cn=squawk_field, ct=squawk_field_type, df=NSN))
+        # AGE=NSN
+        # Add AGE column with a default row value
+        c2.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'" \
+                  .format(tn=table_name1, cn=age_field, ct=age_field_type, df=NSN))
+
+        # *** vartype = FLOAT *** -
+        # RSSI=NSN
+        # Add RSSI column with a default row value
+        c2.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'" \
+                  .format(tn=table_name1, cn=rssi_field, ct=rssi_field_type, df=NSN))
+        # LAT=NSN
+        c2.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'" \
+                  .format(tn=table_name1, cn=lat_field, ct=lat_field_type, df=NSN))
+        # LON=NSN
+        c2.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'" \
+                  .format(tn=table_name1, cn=lon_field, ct=lon_field_type, df=NSN))
+        # RANGE=NSN
+        c2.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'" \
+                  .format(tn=table_name1, cn=range_field, ct=range_field_type, df=NSN))
+
+
+    except sqlite3.OperationalError:
+        # The most likely explanation is that the database already exists
+        pass
+
+    # Commit the database changes
+    conn2.commit()
+
+
+def _add_or_update_db_row(conn2, c2, icao, callsign, level, gspd, track, lat, lon, vert_rate, squawk, rssi, age):
+
+    global NSN
+    global RX_LAT
+    global RX_LON
+    global SLEEP_INTERVAL
+    global table_name1
+    global key_field
+    global callsign_field
+    global level_field
+    global gspd_field
+    global track_field
+    global vert_rate_field
+    global squawk_field
+    global rssi_field
+    global lat_field
+    global lon_field
+    global range_field
+    global age_field
+
+    # Calculate range in Nautical Miles (nm)
+    range = _calc_range_in_nm(RX_LAT, RX_LON, lat, lon)
+
+    # Insert (if doesn't exist already) ICAO entry in the db
+    c2.execute("INSERT OR IGNORE INTO {tn} ({idf}) VALUES ('".format(tn=table_name1, idf=key_field) + icao + "')")
+
+    # CALLSIGN
+    if (callsign != ''):
+        c2.execute(
+            "UPDATE {tn} SET {cn}=('".format(tn=table_name1, cn=callsign_field) + callsign + "') WHERE {idf}=('".format(
+                idf=key_field) + icao + "')")
+    # LEVEL
+    if (level == 'ground'):
+        c2.execute("UPDATE {tn} SET {cn}=0".format(tn=table_name1, cn=level_field) + " WHERE {idf}=('".format(
+            idf=key_field) + icao + "')")
+    elif (level != NSN):
+        c2.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=level_field) + str(level) + ") WHERE {idf}=('".format(
+            idf=key_field) + icao + "')")
+    # GSPD
+    if (gspd != NSN):
+        c2.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=gspd_field) + str(gspd) + ") WHERE {idf}=('".format(
+            idf=key_field) + icao + "')")
+    # TRACK
+    if (track != NSN):
+        c2.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=track_field) + str(track) + ") WHERE {idf}=('".format(
+            idf=key_field) + icao + "')")
+    # VERT_RATE=NSN
+    if (vert_rate != NSN):
+        c2.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=vert_rate_field) + str(
+            vert_rate) + ") WHERE {idf}=('".format(idf=key_field) + icao + "')")
+    # SQUAWK=NSN
+    if (squawk != NSN):
+        c2.execute(
+            "UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=squawk_field) + str(squawk) + ") WHERE {idf}=('".format(
+                idf=key_field) + icao + "')")
+   # RSSI=NSN
+    if (rssi != NSN):
+        c2.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=rssi_field) + str(rssi) + ") WHERE {idf}=('".format(
+            idf=key_field) + icao + "')")
+    # LAT=NSN
+    if (lat != NSN):
+        c2.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=lat_field) + str(lat) + ") WHERE {idf}=('".format(
+            idf=key_field) + icao + "')")
+    # LON=NSN
+    if (lon != NSN):
+        c2.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=lon_field) + str(lon) + ") WHERE {idf}=('".format(
+            idf=key_field) + icao + "')")
+    # RANGE=NSN
+    if (range != NSN):
+        c2.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=range_field) + str(range) + ") WHERE {idf}=('".format(
+            idf=key_field) + icao + "')")
+
+    conn2.commit()
+
+
+    # HANDLE AGE SEPARATELY - If passed-in value is NAN, *AND* current DB entry is *ALSO* NAN, then advance the
+    #                         db entry's current AGE by SLEEP_INTERVAL
+    # TO-DO: Fix logic below, because it contains a bug where an existing db AGE set to NAN will be decremented by
+    #        SLEEP_INTERVAL even though it's not a real "age"
+    # AGE=NSN
+    if (age == NSN):
+        # No data, so advance this entry's age by SLEEP_INTERVAL duration
+        c2.execute(
+            "UPDATE {tn} SET {cn}={cn}+".format(tn=table_name1,
+                                                cn=age_field) + SLEEP_INTERVAL + " WHERE {idf}='".format(
+                idf=key_field) + icao + "'AND {cn} BETWEEN 0 AND ({nsn}-1))".format(cn=age_field, nsn=NSN))
+    else:
+        # There is data being passed in, so use it
+        c2.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=age_field) + str(age) + ") WHERE {idf}=('".format(
+            idf=key_field) + icao + "')")
+
+    conn2.commit()
+
+def _purge_old_airplane_data(conn2, c2, max_age):
+    global NSN
+    global table_name1
+    global age_field
+
+    c2.execute("DELETE FROM {tn} WHERE {af} > {tdo} and {af} <> {nsn}".format(tn=table_name1, af=age_field, tdo=max_age, nsn=NSN))
+    conn2.commit()
+
+
+def _age_all_aircraft_data_by(conn2, c2, how_much):
+    global table_name1
+    global NSN
+    global age_field
+
+    c2.execute("UPDATE {tn} SET {cn}={cn}+{si} WHERE {cn} BETWEEN 0 AND ({nsn}-1)".format(tn=table_name1, cn=age_field, si=how_much, nsn=NSN))
+    conn2.commit()
+
+
+def _calc_range_in_miles(from_lat, from_lon, to_lat, to_lon):
+
+    # TO-DO: Calculate this range value using "real" Great Circle maths
+
+    global NSN
+
+    # (Approx.) Miles-per-degree of latitude/longitude - accuracy is
+    # not as important; only being used for rough estimation
+    # of RANGE, and for comparison in sort operations
+    mpd_lat = 69.0535  # Avg, equator-to-pole
+    mpd_lon = 53.0000  # At 40 degrees N/S
+
+    # CONVERT LAT+LONG into RANGE in miles
+    range = NSN
+    if ((from_lat != NSN) & (from_lon != NSN) & (to_lat != NSN) & (to_lon != NSN)):
+       dlat = from_lat - to_lat
+       # Calculate approximate distance (in miles) of delta in latitude
+       lat_delta_miles = dlat * mpd_lat
+
+       dlon = from_lon - to_lon
+       # Calculate approximate distance (in miles) of delta in longitude
+       lon_delta_miles = dlon * mpd_lon
+
+       # Calculate the approximate range (in nautical miles)
+       range = math.sqrt((lat_delta_miles * lat_delta_miles) + (lon_delta_miles * lon_delta_miles))
+
+    return range
+
+
+
+def _calc_range_in_nm(from_lat, from_lon, to_lat, to_lon):
+
+    global NSN
+
+    range = NSN
+    range = _calc_range_in_miles(from_lat, from_lon, to_lat, to_lon)
+    if (range != NSN):
+        range = range * 0.868976    # 1 Mile is 0.868976 Nautical Miles
+    return range
+
+
+
+
 def get_key(q):
    #print 'Press a key'
    inkey = getch._Getch()
@@ -112,14 +421,6 @@ def get_key(q):
    for i in xrange(sys.maxint):
       k=inkey()
       if k<>'':q.put(k)
-
-
-# (Approx.) Miles-per-degree of latitude/longitude - accuracy is
-# not as important; only being used for rough estimation
-# of RANGE
-mpd_lat = 69.0535	# Avg, equator-to-pole
-mpd_lon = 53.0000	# At 40 degrees N/S
-
 
 
 
@@ -145,96 +446,24 @@ t.start()
 
 
 # Create or open the database
-sqlite_file = '/var/tmp/pyson_db.sqlite'
+# TO-DO: Allow users to configure whether they want to create this database in
+#        memory on on disk
+#sqlite_file = '/var/tmp/pyson_db.sqlite'   # On disk - and in exactly this file
+sqlite_file = ':memory:'                    # In memory
 conn = sqlite3.connect(sqlite_file)
 c = conn.cursor()
 
-table_name1 = 'airplanes'
-key_field = KEY_ICAO # name of the column
-key_field_type = 'STRING'  # column data type
-callsign_field = KEY_CALLSIGN # name of the column
-callsign_field_type = 'STRING'  # column data type
-level_field = KEY_LEVEL # name of the column
-level_field_type = 'INTEGER'  # column data type
-gspd_field = KEY_GSPD # name of the column
-gspd_field_type = 'INTEGER'  # column data type
-track_field = KEY_TRACK # name of the column
-track_field_type = 'INTEGER'  # column data type
-vert_rate_field = KEY_VERT_RATE # name of the column
-vert_rate_field_type = 'INTEGER'  # column data type
-squawk_field = KEY_SQUAWK # name of the column
-squawk_field_type = 'INTEGER'  # column data type
-age_field = KEY_AGE # name of the column
-age_field_type = 'INTEGER'  # column data type
-rssi_field = KEY_RSSI # name of the column
-rssi_field_type = 'FLOAT'  # column data type
-lat_field = KEY_LAT # name of the column
-lat_field_type = 'FLOAT'  # column data type
-lon_field = KEY_LON # name of the column
-lon_field_type = 'FLOAT'  # column data type
-range_field = KEY_LON # name of the column
-range_field_type = 'FLOAT'  # column data type
-
-
-# Creating a second table with 1 column and set it as PRIMARY KEY
-# note that PRIMARY KEY column must consist of unique values!
-try:
-    c.execute('CREATE TABLE {tn} ({nf} {ft} PRIMARY KEY)'\
-        .format(tn=table_name1, nf=key_field, ft=key_field_type))
-    # Add CALLSIGN column with a default row value
-    c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'"\
-        .format(tn=table_name1, cn=callsign_field, ct=callsign_field_type, df=''))
-
-# *** vartype = INTEGER *** -
-# LEVEL=NSN
-    # Add LEVEL column with a default row value
-    c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'"\
-        .format(tn=table_name1, cn=level_field, ct=level_field_type, df=NSN))
-# GSPD=NSN
-    # Add GSPD column with a default row value
-    c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'"\
-        .format(tn=table_name1, cn=gspd_field, ct=gspd_field_type, df=NSN))
-# TRACK=NSN
-    # Add TRACK column with a default row value
-    c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'"\
-        .format(tn=table_name1, cn=track_field, ct=track_field_type, df=NSN))
-# VERT_RATE=NSN
-    # Add VERT_RATE column with a default row value
-    c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'"\
-        .format(tn=table_name1, cn=vert_rate_field, ct=vert_rate_field_type, df=NSN))
-# SQUAWK=NSN
-    # Add SQUAWK column with a default row value
-    c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'"\
-        .format(tn=table_name1, cn=squawk_field, ct=squawk_field_type, df=NSN))
-# AGE=NSN
-    # Add AGE column with a default row value
-    c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'"\
-        .format(tn=table_name1, cn=age_field, ct=age_field_type, df=NSN))
-
-# *** vartype = FLOAT *** -
-# RSSI=NSN
-    # Add RSSI column with a default row value
-    c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'"\
-        .format(tn=table_name1, cn=rssi_field, ct=rssi_field_type, df=NSN))
-# LAT=NSN
-    c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'"\
-        .format(tn=table_name1, cn=lat_field, ct=lat_field_type, df=NSN))
-# LON=NSN
-    c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'"\
-        .format(tn=table_name1, cn=lon_field, ct=lon_field_type, df=NSN))
-# RANGE=NSN
-    c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'"\
-        .format(tn=table_name1, cn=range_field, ct=range_field_type, df=NSN))
-
-
-except sqlite3.OperationalError:
-    pass
-
-# Commit the database changes
-conn.commit()
 
 
 
+# Create the database tables, if they don't already exist (HINT: If using
+# in-memory db, they don't, otherwise they might - depending upon whether
+# or not this is the first time running this program on this host!)
+_create_db_tables(conn, c)
+
+
+# TO-DO: Allow users to configure whether the database should
+#        be initialized (emptied) upon startup.
 ############ CAUTION! #############
 ############ CAUTION! #############
 ############ CAUTION! #############
@@ -275,35 +504,15 @@ if ((RX_LAT == NSN) | (RX_LON == NSN)):
     raise SystemExit
 
 
-# Establish ORDER BY clauses, and pick one as the default
-ORDER_BY_RANGE_ASC=" {sf} ASC, {kf} DESC".format(sf=range_field, kf=key_field)
-ORDER_BY_RANGE_DESC=" {sf} DESC, {kf} DESC".format(sf=range_field, kf=key_field)
-ORDER_BY_ICAO_ASC=" {sf} ASC".format(sf=key_field)
-ORDER_BY_ICAO_DESC=" {sf} DESC".format(sf=key_field)
-ORDER_BY_LEVEL_ASC=" {sf} ASC, {kf} ASC".format(sf=level_field, kf=key_field)
-ORDER_BY_LEVEL_DESC=" {sf} DESC, {kf} ASC".format(sf=level_field, kf=key_field)
-ORDER_BY_GSPD_ASC=" {sf} ASC, {kf} ASC".format(sf=gspd_field, kf=key_field)
-ORDER_BY_GSPD_DESC=" {sf} DESC, {kf} ASC".format(sf=gspd_field, kf=key_field)
-ORDER_BY_VERT_RATE_ASC=" abs({sf}) ASC, {kf} ASC".format(sf=vert_rate_field, kf=key_field)
-ORDER_BY_VERT_RATE_DESC=" abs({sf}) DESC, {kf} ASC".format(sf=vert_rate_field, kf=key_field)
-ORDER_BY_RSSI_ASC=" {sf} ASC, {rf} DESC, {kf} ASC".format(sf=rssi_field, rf=range_field, kf=key_field)
-ORDER_BY_RSSI_DESC=" {sf} DESC, {rf} ASC, {kf} ASC".format(sf=rssi_field, rf=range_field, kf=key_field)
-ORDER_BY_CALLSIGN_ASC=" {sf} ASC, {kf} ASC".format(sf=callsign_field, kf=key_field)
-ORDER_BY_CALLSIGN_DESC=" {sf} DESC, {kf} ASC".format(sf=callsign_field, kf=key_field)
-ORDER_BY_SQUAWK_ASC=" {sf} ASC, {kf} ASC".format(sf=squawk_field, kf=key_field)
-ORDER_BY_SQUAWK_DESC=" {sf} DESC, {kf} ASC".format(sf=squawk_field, kf=key_field)
-ORDER_BY_TRACK_ASC=" {sf} ASC, {kf} ASC".format(sf=track_field, kf=key_field)
-ORDER_BY_TRACK_DESC=" {sf} DESC, {kf} ASC".format(sf=track_field, kf=key_field)
-
-# Establish the default ORDER BY clause -
-ORDER_BY_CLAUSE=ORDER_BY_RANGE_DESC
-
-
 
 should_continue=1
 planes_shown=0
 max_planes_to_show=(lines_to_display*2)
 subprocess.call('tput clear',shell=True)
+
+
+
+
 while (should_continue == 1):
 
   subprocess.call('tput home',shell=True)
@@ -327,8 +536,14 @@ while (should_continue == 1):
     #   print 'key = %s   ' % key
     #   print 'value = %s\n' % line[key]
 
+    # Initialize all displayable variables before reading new ones
+    init_display_vars()
+
+    # NOTE: Still have to fix CAOs that look like scientific notation (e.g. "780e08").  As of now they are
+    #       being treated like actual hex strings and not numbers (e.g. "78000000000") and blowing the
+    #       ICAO field's string formatting!
     #print '\nFORMATTED -'
-    ICAO = str(line.get(KEY_ICAO, '')).upper()
+    ICAO = str(line.get(KEY_ICAO, '').encode('latin1')).upper()
     #print '\tICAO = %s' % ICAO
     CALLSIGN = str(line.get(KEY_CALLSIGN, '')).upper()
     #print '\tCALLSIGN = %s' % CALLSIGN
@@ -351,83 +566,30 @@ while (should_continue == 1):
     AGE = line.get(KEY_AGE, NSN)
     #print '\tAGE = %s' % AGE
 
-    # CONVERT LAT+LONG into RANGE (nm)
-    RANGE=NSN
-    if ((LAT != NSN) & (LON != NSN)):
-        DLAT=RX_LAT-LAT
-        # Calculate approximate distance (in miles) of delta in latitude
-        LAT_DELTA_MILES=DLAT*mpd_lat
-
-        DLON=RX_LON-LON
-        # Calculate approximate distance (in miles) of delta in longitude
-        LON_DELTA_MILES=DLON*mpd_lon
-
-        # Calculate the approximate range (in nautical miles)
-        RANGE=math.sqrt((LAT_DELTA_MILES*LAT_DELTA_MILES)+(LON_DELTA_MILES*LON_DELTA_MILES))*0.868976
+    ############# END OF PARSING ALL URL DATA  ###############
 
 
-    # Insert (if doesn't exist already) ICAO entry in the db
-    c.execute("INSERT OR IGNORE INTO {tn} ({idf}) VALUES ('".format(tn=table_name1, idf=key_field) + ICAO + "')")
-
-    # CALLSIGN
-    if (CALLSIGN != ''):
-        c.execute("UPDATE {tn} SET {cn}=('".format(tn=table_name1, cn=callsign_field) + CALLSIGN + "') WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
-    # LEVEL 
-    if (LEVEL == 'ground'):
-        c.execute("UPDATE {tn} SET {cn}=0".format(tn=table_name1, cn=level_field) + " WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
-    elif (LEVEL != NSN):
-        c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=level_field) + str(LEVEL) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
-    # GSPD
-    if (GSPD != NSN):
-        c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=gspd_field) + str(GSPD) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
-    # TRACK
-    if (TRACK != NSN):
-        c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=track_field) + str(TRACK) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
-    # VERT_RATE=NSN
-    if (VERT_RATE != NSN):
-        c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=vert_rate_field) + str(VERT_RATE) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
-    # SQUAWK=NSN
-    if (SQUAWK != NSN):
-        c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=squawk_field) + str(SQUAWK) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
-    # AGE=NSN
-    if (AGE == NSN):
-        # No data, so advance this entry's age by SLEEP_INTERVAL duration
-        c.execute("UPDATE {tn} SET {cn}={cn}+".format(tn=table_name1, cn=age_field) + SLEEP_INTERVAL + " WHERE {idf}='".format(idf=key_field) + ICAO + "')")
-    else:
-        # There is data, so use it
-        c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=age_field) + str(AGE) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
-    # RSSI=NSN
-    if (RSSI != NSN):
-        c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=rssi_field) + str(RSSI) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
-    # LAT=NSN
-    if (LAT != NSN):
-        c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=lat_field) + str(LAT) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
-    # LON=NSN
-    if (LON != NSN):
-        c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=lon_field) + str(LON) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
-    # RANGE=NSN
-    if (RANGE != NSN):
-        c.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=range_field) + str(RANGE) + ") WHERE {idf}=('".format(idf=key_field) + ICAO + "')")
-  ############# END OF PARSING ALL URL DATA  ###############
-  conn.commit()
+    # Add this one aircraft's data to the database
+    _add_or_update_db_row(conn, c, ICAO, CALLSIGN, LEVEL, GSPD, TRACK, LAT, LON, VERT_RATE, SQUAWK, RSSI, AGE)
 
 
+  # TO-DO: Allow user to configure whether these "older" records should be purged
+  # TO-DO: Allow user to specify how long this "purge duration" should be (perhaps "0" means "never delete"?)
   ## Purge all records older than "too old to use"
-  c.execute("DELETE FROM {tn} WHERE {af} > {tdo} and {af} <> {nsn}".format(tn=table_name1, af=age_field, tdo=TOO_DARN_OLD, nsn=NSN))
-  #id_exists = c.fetchall()
-  conn.commit()
+  _purge_old_airplane_data(conn, c, TOO_DARN_OLD)
 
-  ## Get all data from the database in max-range order, desc
-  #retrieve-all-ICAOs-ordered by max-range descending
+
+  ## Get all data from the database using the current sort order
   c.execute("SELECT {idf} FROM {tn} WHERE {sf} < {nsn} ORDER BY {obc}".format(idf=key_field, tn=table_name1, sf=range_field, nsn=NSN, obc=ORDER_BY_CLAUSE))
   id_exists = c.fetchall()
 
 
+  # Display column header
   print "  ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK | dbm        ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK | dbm       \r"
 
   for icao_data in id_exists:
 
-    ICAO=format(icao_data[0])
+    ICAO = format(icao_data[0])
 
 
 ################################
@@ -635,7 +797,7 @@ while (should_continue == 1):
           elif (ORDER_BY_CLAUSE == ORDER_BY_RSSI_DESC):
               ORDER_BY_CLAUSE=ORDER_BY_RSSI_ASC
           else:
-              ORDER_BY_CLAUSE=ORDER_BY_RSSI_ASC
+              ORDER_BY_CLAUSE=ORDER_BY_RSSI_DESC
       elif (s == KEYS_SORT_CALLSIGN):
           # Change order by clause to CALLSIGN, ASC
           if (ORDER_BY_CLAUSE == ORDER_BY_CALLSIGN_ASC):
@@ -662,9 +824,11 @@ while (should_continue == 1):
               ORDER_BY_CLAUSE=ORDER_BY_TRACK_ASC
 
 
-  # All db entries are now SLEEP_INTERVAL older!
-  c.execute("UPDATE {tn} SET {cn}={cn}+{si}".format(tn=table_name1, cn=age_field, si=SLEEP_INTERVAL))
-  conn.commit()
+
+# All aircraft's db data is now SLEEP_INTERVAL older!
+_age_all_aircraft_data_by(conn, c, SLEEP_INTERVAL)
+
+
 
 # End of while should_continue...
 
@@ -675,7 +839,6 @@ conn.close()
 termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
 # Move the cursor to the bottom of the screen
-lines_to_display=int(result)-1
 print("\033[{0};0H\r\n".format(lines_to_display))
 
 raise SystemExit
