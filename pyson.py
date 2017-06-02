@@ -21,6 +21,9 @@ import time
 import sys
 import sys, tty, termios
 
+KEYS_QUIT='q'
+KEYS_SORT_ICAO='i'
+KEYS_SORT_RANGE='r'
 
 
 # "No Such Number" - Until I can figure out how to filter out non-existent dictionary entries,
@@ -265,6 +268,15 @@ if ((RX_LAT == NSN) | (RX_LON == NSN)):
     raise SystemExit
 
 
+# Establish ORDER BY clauses, and pick one as the default
+ORDER_BY_RANGE_ASC=" {sf} ASC, {rssi} DESC".format(sf=range_field, rssi=rssi_field)
+ORDER_BY_RANGE_DESC=" {sf} DESC, {rssi} DESC".format(sf=range_field, rssi=rssi_field)
+ORDER_BY_ICAO_ASC=" {sf} ASC".format(sf=key_field)
+ORDER_BY_ICAO_DESC=" {sf} DESC".format(sf=key_field)
+ORDER_BY_CLAUSE=ORDER_BY_RANGE_DESC
+
+
+
 should_continue=1
 planes_shown=0
 max_planes_to_show=(lines_to_display*2)
@@ -384,7 +396,7 @@ while (should_continue == 1):
 
   ## Get all data from the database in max-range order, desc
   #retrieve-all-ICAOs-ordered by max-range descending
-  c.execute("SELECT {idf} FROM {tn} WHERE {sf} < {nsn} ORDER BY {sf} DESC, {rssi} DESC".format(idf=key_field, tn=table_name1, sf=range_field, nsn=NSN, rssi=rssi_field))
+  c.execute("SELECT {idf} FROM {tn} WHERE {sf} < {nsn} ORDER BY {obc}".format(idf=key_field, tn=table_name1, sf=range_field, nsn=NSN, obc=ORDER_BY_CLAUSE))
   id_exists = c.fetchall()
   for icao_data in id_exists:
 
@@ -544,8 +556,24 @@ while (should_continue == 1):
   else:
       s = q.get()
       #print "Found {} in the queue!".format(s)
-      if (s == 'q'):
+      if (s == KEYS_QUIT):
           should_continue=0
+      elif (s == KEYS_SORT_ICAO):
+          # Change order by clause to ICAO, ASC
+          if (ORDER_BY_CLAUSE == ORDER_BY_ICAO_ASC):
+              ORDER_BY_CLAUSE=ORDER_BY_ICAO_DESC
+          elif (ORDER_BY_CLAUSE == ORDER_BY_ICAO_DESC):
+              ORDER_BY_CLAUSE=ORDER_BY_ICAO_ASC
+          else:
+              ORDER_BY_CLAUSE=ORDER_BY_ICAO_ASC
+      elif (s == KEYS_SORT_RANGE):
+          # Change order by clause to RANGE, DESC
+          if (ORDER_BY_CLAUSE == ORDER_BY_RANGE_ASC):
+              ORDER_BY_CLAUSE=ORDER_BY_RANGE_DESC
+          elif (ORDER_BY_CLAUSE == ORDER_BY_RANGE_DESC):
+              ORDER_BY_CLAUSE=ORDER_BY_RANGE_ASC
+          else:
+              ORDER_BY_CLAUSE=ORDER_BY_RANGE_DESC
 
 
   # All db entries are now SLEEP_INTERVAL older!
