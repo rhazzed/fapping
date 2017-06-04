@@ -14,6 +14,8 @@
 #                             scientific notation
 #                      TO-DO: Remove so many dang GLOBAL VARIABLES
 #                      TO-DO: (there are more - search for "TO-DO:" in this code!)
+#  2017-06-03  msipin  Adapted to piAware already exposing the two files we need - receiver.json
+#                      and aircraft.json.
 ############################################
 
 import sys, math, time
@@ -491,7 +493,7 @@ lines_to_display=int(result)-1
 
 # Pickup receiver lat/lon
 # { "version" : "3.5.0", "refresh" : 1000, "history" : 120, "lat" : 34.492610, "lon" : -117.407060 }
-url = "http://" + IP_ADDR + ":8080/receiver.json"
+url = "http://" + IP_ADDR + ":8080/dump1090-fa/data/receiver.json"
 response = urllib.urlopen(url)
 line = json.loads(response.read())
 RX_LAT = line.get(KEY_LAT, NSN)
@@ -520,7 +522,7 @@ while (should_continue == 1):
   planes_shown=0
 
 
-  url = "http://" + IP_ADDR + ":8080/aircraft.json"
+  url = "http://" + IP_ADDR + ":8080/dump1090-fa/data/aircraft.json"
   response = urllib.urlopen(url)
   d = json.loads(response.read())['aircraft']
   #print '\n'
