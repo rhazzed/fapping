@@ -5,38 +5,6 @@ This is a respository for working with the piAware (flightaware for the Raspberr
 (P.S. "fap" came from the first tool we wrote - "Flight Aware Performance". Don't project your issues onto us... ;)
 
 
-NOTE: If you want to use some of the best tools (fap.py, ason, pyson.py) you need to add a few lines to the
-/etc/lighttpd/conf-available/50-piaware.conf file -
-
-######################################################################
-      # Allow access to aircraft.json -
-      alias.url += (
-          "/aircraft.json" => "/run/dump1090-fa/aircraft.json"
-      )
-
-      # Allow access to receiver.json -
-      alias.url += (
-          "/receiver.json" => "/run/dump1090-fa/receiver.json"
-      )
-######################################################################
-
-CAUTION: While adding the aircraft.json lines will not represent a security issue, adding the
-         lines for receiver.json will allow anyone on your local network to see your EXACT
-         latitude and longitude, as expressed to flightaware.com.
-
-         Most people don't expost their PiAware directly to the Internet, but if you allow
-         the general public to reach your PiAware on port 8080, the addition of the receiver.json
-         lines, above, will let others see the *exact* LATT/LONG where you live.  HOWEVER: If you
-         already allow this port 8080 access, they can see exactly where you live already!  -- The
-         radar map has a huge black dot centered right on your receiver's LATT/LONG....so you see,
-         adding this line isn't really making things worse than they may already be... We just
-         wanted you to know, that's all. =-)
-
-
-
-
-
-
 ###################################################################
 # EMAIL CHAIN DESCRIBING THE TOOLS AND THEIR USE FOLLOWS
 ###################################################################
@@ -54,80 +22,6 @@ CAUTION: While adding the aircraft.json lines will not represent a security issu
 > it shows RSSI, which is the signal strength of each plane's messages.
 > Plus, ason uses much less CPU (and much less network bandwidth), even
 > though rawsb didn't use much CPU to begin with.
-> 
-> You have to add one entry to the lighttpd daemon's config file in order
-> to get the data we need from the Pi, remotely.
-> 
-> In the file - /etc/lighttpd/conf-available/50-piaware.conf - you will
-> need to add these lines -
-> ============================================================
-> 
-> # Allow access to aircraft.json -
-> alias.url += (
->     "/aircraft.json" => "/run/dump1090-fa/aircraft.json"
-> )
-> 
-> 
-> 
-> 
-> 
-> 
-> 
-> 
-> 
-> 
-> BEFORE ADDING THE ENTRY YOUR FILE MIGHT LOOK SOMETHING LIKE THIS -
-> ==================================================================
-> 
-> # Allows access to the piaware status file, and
-> # does translation rewrites for the landing page
-> 
-> alias.url += (
->     "/status.json" => "/run/piaware/status.json"
-> )
-> 
-> server.modules += ( "mod_rewrite" )
-> 
-> $HTTP["language"] =~ "(en)" {
->     url.rewrite = ( "^/translations/lang.js$" => "/translations/%1.js" )
-> }
-> else $HTTP["language"] =~ ".*" {
->     url.rewrite = ( "^/translations/lang.js$" => "/translations/en.js" )
-> }
-> 
-> 
-> 
-> 
-> 
-> 
-> AFTER ADDING THE ENTRY YOUR FILE SHOULD LOOK SOMETHING LIKE THIS -
-> ==================================================================
-> 
-> # Allows access to the piaware status file, and
-> # does translation rewrites for the landing page
-> 
-> alias.url += (
->     "/status.json" => "/run/piaware/status.json"
-> )
-> 
-> # Allow access to aircraft.json -
-> alias.url += (
->     "/aircraft.json" => "/run/dump1090-fa/aircraft.json"
-> )
-> 
-> server.modules += ( "mod_rewrite" )
-> 
-> $HTTP["language"] =~ "(en)" {
->     url.rewrite = ( "^/translations/lang.js$" => "/translations/%1.js" )
-> }
-> else $HTTP["language"] =~ ".*" {
->     url.rewrite = ( "^/translations/lang.js$" => "/translations/en.js" )
-> }
-> 
-> 
-> This should be picked up automatically.  If not, restart the lighttpd
-> daemon (or reboot your pi), and "ason" should be able to remotely grab
-> all the data it needs!
 > 
 > 
 > A Python version of the "ason" tool is pyson.py - It's a work in progress.
