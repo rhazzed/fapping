@@ -427,13 +427,17 @@ def get_key(q):
 
 
 if (len(sys.argv) <2):
-    sys.stdout.write('\nUsage: ')
-    sys.stdout.write(sys.argv[0])
-    sys.stdout.write(' <ip_address>\n\n')
+    sys.stderr.write('\nusage: ')
+    sys.stderr.write(sys.argv[0])
+    sys.stderr.write(' <ip_address[:port]> [<ip_address2[:port]>...]\n\n')
+    sys.stderr.write("Port number is optional, with a default of 8080.\n")
+    sys.stderr.write("If more than one IP address is provided, all range calculations will be based\n")
+    sys.stderr.write("upon the location of the receiver at the first IP address provided.\n\n")
     raise SystemExit
 
 # Pickup IP address
-IP_ADDR=sys.argv[1]
+ARGNO=1
+NUMARGS=len(sys.argv)
 
 # Pickup existing <stdin> environment
 fd = sys.stdin.fileno()
@@ -489,11 +493,12 @@ lines_to_display=int(result)-1
 ##print "Screen height = %s" % height
 
 
-
-
-# Pickup receiver lat/lon
+# Pickup receiver lat/lon from the FIRST (and possibly only) IP address given on the command line
 # { "version" : "3.5.0", "refresh" : 1000, "history" : 120, "lat" : 34.492610, "lon" : -117.407060 }
-url = "http://" + IP_ADDR + ":8080/dump1090-fa/data/receiver.json"
+if (sys.argv[ARGNO].find(":") == -1):
+    url = "http://" + sys.argv[ARGNO] + ":8080/dump1090-fa/data/receiver.json"
+else:
+    url = "http://" + sys.argv[ARGNO] + "/dump1090-fa/data/receiver.json"
 response = urllib.urlopen(url)
 line = json.loads(response.read())
 RX_LAT = line.get(KEY_LAT, NSN)
@@ -521,58 +526,63 @@ while (should_continue == 1):
   conn.commit()
   planes_shown=0
 
+  for idx in range(ARGNO, NUMARGS):
+      if (sys.argv[idx].find(":") == -1):
+          url = "http://" + sys.argv[idx] + ":8080/dump1090-fa/data/aircraft.json"
+      else:
+          url = "http://" + sys.argv[idx] + "/dump1090-fa/data/aircraft.json"
 
-  url = "http://" + IP_ADDR + ":8080/dump1090-fa/data/aircraft.json"
-  response = urllib.urlopen(url)
-  d = json.loads(response.read())['aircraft']
-  #print '\n'
-  #print d
-  #print 'Length of dictionary: %d\n' % len(d)
-  #print '\n'
+      response = urllib.urlopen(url)
+      d = json.loads(response.read())['aircraft']
+      #print '\n'
+      #print d
+      #print 'Length of dictionary: %d\n' % len(d)
+      #print '\n'
 
-  ############# START OF PARSING ALL URL DATA  ###############
-  for line in d:
+      ############# START OF PARSING ALL URL DATA  ###############
+      for line in d:
 
-    #print '\nRead line - %s' % line
-    #for key in line:
-    #   print 'key = %s   ' % key
-    #   print 'value = %s\n' % line[key]
+        #print '\nRead line - %s' % line
+        #for key in line:
+        #   print 'key = %s   ' % key
+        #   print 'value = %s\n' % line[key]
 
-    # Initialize all displayable variables before reading new ones
-    init_display_vars()
+        # Initialize all displayable variables before reading new ones
+        init_display_vars()
 
-    # NOTE: Still have to fix CAOs that look like scientific notation (e.g. "780e08").  As of now they are
-    #       being treated like actual hex strings and not numbers (e.g. "78000000000") and blowing the
-    #       ICAO field's string formatting!
-    #print '\nFORMATTED -'
-    ICAO = str(line.get(KEY_ICAO, '').encode('latin1')).upper()
-    #print '\tICAO = %s' % ICAO
-    CALLSIGN = str(line.get(KEY_CALLSIGN, '')).upper()
-    #print '\tCALLSIGN = %s' % CALLSIGN
-    LEVEL = line.get(KEY_LEVEL, NSN)
-    #print '\tLEVEL = %s' % LEVEL
-    GSPD = line.get(KEY_GSPD, NSN)
-    #print '\tGSPD = %s' % GSPD
-    TRACK = line.get(KEY_TRACK, NSN)
-    #print '\tTRACK = %s' % TRACK
-    LAT = line.get(KEY_LAT, NSN)
-    #print '\tLAT = %s' % LAT
-    LON = line.get(KEY_LON, NSN)
-    #print '\tLON = %s' % LON
-    VERT_RATE = line.get(KEY_VERT_RATE, NSN)
-    #print '\tVERT_RATE = %s' % VERT_RATE
-    SQUAWK= line.get(KEY_SQUAWK, NSN)
-    #print '\tSQUAWK = %s' % SQUAWK
-    RSSI = line.get(KEY_RSSI, NSN)
-    #print '\tRSSI = %s' % RSSI
-    AGE = line.get(KEY_AGE, NSN)
-    #print '\tAGE = %s' % AGE
+        # NOTE: Still have to fix CAOs that look like scientific notation (e.g. "780e08").  As of now they are
+        #       being treated like actual hex strings and not numbers (e.g. "78000000000") and blowing the
+        #       ICAO field's string formatting!
+        #print '\nFORMATTED -'
+        ICAO = str(line.get(KEY_ICAO, '').encode('latin1')).upper()
+        #print '\tICAO = %s' % ICAO
+        CALLSIGN = str(line.get(KEY_CALLSIGN, '')).upper()
+        #print '\tCALLSIGN = %s' % CALLSIGN
+        LEVEL = line.get(KEY_LEVEL, NSN)
+        #print '\tLEVEL = %s' % LEVEL
+        GSPD = line.get(KEY_GSPD, NSN)
+        #print '\tGSPD = %s' % GSPD
+        TRACK = line.get(KEY_TRACK, NSN)
+        #print '\tTRACK = %s' % TRACK
+        LAT = line.get(KEY_LAT, NSN)
+        #print '\tLAT = %s' % LAT
+        LON = line.get(KEY_LON, NSN)
+        #print '\tLON = %s' % LON
+        VERT_RATE = line.get(KEY_VERT_RATE, NSN)
+        #print '\tVERT_RATE = %s' % VERT_RATE
+        SQUAWK= line.get(KEY_SQUAWK, NSN)
+        #print '\tSQUAWK = %s' % SQUAWK
+        RSSI = line.get(KEY_RSSI, NSN)
+        #print '\tRSSI = %s' % RSSI
+        AGE = line.get(KEY_AGE, NSN)
+        #print '\tAGE = %s' % AGE
 
-    ############# END OF PARSING ALL URL DATA  ###############
+        ############# END OF PARSING ALL URL DATA FROM THIS URL  ###############
 
 
-    # Add this one aircraft's data to the database
-    _add_or_update_db_row(conn, c, ICAO, CALLSIGN, LEVEL, GSPD, TRACK, LAT, LON, VERT_RATE, SQUAWK, RSSI, AGE)
+        # Add this one aircraft's data to the database
+        _add_or_update_db_row(conn, c, ICAO, CALLSIGN, LEVEL, GSPD, TRACK, LAT, LON, VERT_RATE, SQUAWK, RSSI, AGE)
+  # Done, for each IP address given on the command line
 
 
   # TO-DO: Allow user to configure whether these "older" records should be purged
@@ -638,7 +648,8 @@ while (should_continue == 1):
         AGE=id_exists[9]
         RANGE=id_exists[10]
     else:
-        print("\nNOTHING FOUND IN DB FOR ICAO = " + ICAO + "!\r")
+        #print("\nNOTHING FOUND IN DB FOR ICAO = " + ICAO + "!\r")
+        continue
 
 
 
@@ -844,32 +855,3 @@ termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 print("\033[{0};0H\r\n".format(lines_to_display))
 
 raise SystemExit
-
-
-#########################
-# Potentially useful URLs  -
-# 
-# http://${IP_ADDR}:8080/receiver.json
-# { "version" : "3.5.0", "refresh" : 1000, "history" : 120, "lat" : 34.492610, "lon" : -117.407060 }
-# 
-# 
-# http://${IP_ADDR}:8080/aircraft.json
-# { "now" : 1496279916.6,
-#  "messages" : 420047,
-#  "aircraft" : [
-#    {"hex":"a76fe9","altitude":23000,"mlat":[],"tisb":[],"messages":2,"seen":0.2,"rssi":-9.5},
-#    {"hex":"ab0d15","squawk":"2023","flight":"AAL2576 ","lat":34.385605,"lon":-117.692497,"nucp":7,"seen_pos":0.4,"altitude":28700,"vert_rate":2112,"track":50,"speed":478,"category":"A5","mlat":[],"tisb":[],"messages":381,"seen":0.0,"rssi":-2.4},
-#    {"hex":"a260bc","altitude":10150,"mlat":[],"tisb":[],"messages":77,"seen":18.0,"rssi":-3.7},
-#    {"hex":"a9d7c1","squawk":"6736","altitude":33350,"mlat":[],"tisb":[],"messages":635,"seen":0.3,"rssi":-2.5},
-#    {"hex":"ac3456","squawk":"4674","flight":"N886CE  ","lat":34.730118,"lon":-117.480562,"nucp":7,"seen_pos":0.0,"altitude":19175,"vert_rate":-1728,"track":257,"speed":390,"category":"A2","mlat":[],"tisb":[],"messages":730,"seen":0.0,"rssi":-3.7},
-#    {"hex":"a24082","mlat":[],"tisb":[],"messages":10,"seen":276.7,"rssi":-3.7},
-#    {"hex":"c06e87","squawk":"1022","altitude":28825,"mlat":[],"tisb":[],"messages":1203,"seen":0.1,"rssi":-2.6},
-#    {"hex":"a1f1de","altitude":29000,"mlat":[],"tisb":[],"messages":1934,"seen":46.9,"rssi":-4.3},
-#    {"hex":"a47fd9","mlat":[],"tisb":[],"messages":1755,"seen":145.8,"rssi":-4.3},
-#    {"hex":"a50f40","altitude":14950,"mlat":[],"tisb":[],"messages":902,"seen":56.5,"rssi":-3.9},
-#    {"hex":"a9a90b","mlat":[],"tisb":[],"messages":1608,"seen":98.9,"rssi":-4.6},
-#    {"hex":"a72c3b","mlat":[],"tisb":[],"messages":1607,"seen":97.3,"rssi":-4.3},
-#    {"hex":"~adf9c2","type":"adsb_other","mlat":[],"tisb":[],"messages":8101,"seen":1.0,"rssi":-3.7}
-#  ]
-#}
-#
