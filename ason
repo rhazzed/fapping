@@ -6,11 +6,14 @@
 #
 #  2017-05-25  msipin  Created.
 #  2017-05-26  msipin  Replaced lattitude/longitude with range (in nm).
-#                      NOTE: REQUIRES ACCESS to "/receiver.json", which you
-#                            get by adding an appropriate entry in the
-#                            /etc/lighttpd/conf-available/50-piaware.conf file.
+#   (** SEE BELOW **)  NOTE: REQUIRES ACCESS to "/receiver.json", which you
+#   (** SEE BELOW **)        get by adding an appropriate entry in the
+#   (** SEE BELOW **)        /etc/lighttpd/conf-available/50-piaware.conf file.
 #  2017-05-26  msipin  Improved range-calculation logic slightly (it's still just
 #                      a back-of-the-envelope guess...).
+#  2017-06-03  msipin  Adapted to piAware already exposing the two files we need -
+#                      receiver.json and aircraft.json.
+#     NOTE: THIS ELIMINATES THE lighttpd ENTRY REQUIRED BY THE 2017-05-26 RELEASE!!
 #######################################################
 
 tmp_file1=/var/tmp/$$.ason.1
@@ -38,7 +41,7 @@ rm -f $tmp_file1
 
 
 # Pickup the receiver's lat/long
-wget -q http://${IP_ADDR}/receiver.json -O - | sed "s/{//g" | sed "s/}//g" | sed "s/,/ /g" | sed "s/\"//g" | sed "s/ : /:/g" | awk '{ for (i=1;i<=NF;i++){print $i;};}' | awk -F":" '{ if (($1 == "lat") || ($1 == "lon")) print $1,$2; }' >> $tmp_file1
+wget -q http://${IP_ADDR}:8080/dump1090-fa/data/receiver.json -O - | sed "s/{//g" | sed "s/}//g" | sed "s/,/ /g" | sed "s/\"//g" | sed "s/ : /:/g" | awk '{ for (i=1;i<=NF;i++){print $i;};}' | awk -F":" '{ if (($1 == "lat") || ($1 == "lon")) print $1,$2; }' >> $tmp_file1
 
 rx_lat=`grep "^lat " $tmp_file1 | awk '{ print $2 }'`
 rx_lon=`grep "^lon " $tmp_file1 | awk '{ print $2 }'`
@@ -62,7 +65,7 @@ do
     lines_to_display=`expr $rows - 2`
 
 
-    wget -q http://${IP_ADDR}/aircraft.json -O - | grep '"hex":' | sed "s/{//g" | sed "s/}//g" | sed "s/,/ /g" | sed "s/\"//g" | sed "s/ mlat:.*.tisb/ tisb/" | sed "s/ tisb:.*.messages/ messages/" | awk '{
+    wget -q http://${IP_ADDR}:8080/dump1090-fa/data/aircraft.json -O - | grep '"hex":' | sed "s/{//g" | sed "s/}//g" | sed "s/,/ /g" | sed "s/\"//g" | sed "s/ mlat:.*.tisb/ tisb/" | sed "s/ tisb:.*.messages/ messages/" | awk '{
 
 for (i=1; i<= NF; i++) {
 
