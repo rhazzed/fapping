@@ -16,7 +16,6 @@
 #                      TO-DO: (there are more - search for "TO-DO:" in this code!)
 #  2017-06-03  msipin  Adapted to piAware already exposing the two files we need - receiver.json
 #                      and aircraft.json.
-#  2017-06-06  msipin  Added option to display SBS-1 BaseStation output.
 ############################################
 
 import sys, math, time
@@ -426,24 +425,16 @@ def get_key(q):
       if k<>'':q.put(k)
 
 
-BS_OUTPUT_ARG="-sbs"
-OUTPUT="std"
-ARGNO=1
-
 if (len(sys.argv) <2):
-    sys.stderr.write('\nusage: {0} [{1}] <ip_address[:port]> [<ip_address2[:port]>...]\n\n'.format(sys.argv[0], BS_OUTPUT_ARG))
+    sys.stderr.write('\nusage: {0} <ip_address[:port]> [<ip_address2[:port]>...]\n\n'.format(sys.argv[0]))
     sys.stderr.write("Port number is optional, with a default of 8080.\n")
     sys.stderr.write("If more than one IP address is provided, all range calculations will be based\n")
-    sys.stderr.write("upon the location of the receiver at the first IP address provided.\n")
-    sys.stderr.write("{0} optionally produces SBS-1 BaseStation output. Default is a combined flight status screen\n\n".format(BS_OUTPUT_ARG))
+    sys.stderr.write("upon the location of the receiver at the first IP address provided.\n\n")
     raise SystemExit
-
-if (sys.argv[1] == BS_OUTPUT_ARG):
-    OUTPUT="sbs"
-    ARGNO=2
 
 # Pickup IP address
 NUMARGS=len(sys.argv)
+ARGNO=1
 
 # Pickup existing <stdin> environment
 fd = sys.stdin.fileno()
