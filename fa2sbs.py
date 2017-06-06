@@ -13,6 +13,17 @@ import math
 import urllib
 import json
 import time
+import datetime
+import socket
+import sys
+import Queue
+import threading
+
+
+
+HOST = ''  # Symbolic name meaning all available interfaces
+PORT = 3003  # Arbitrary non-privileged port
+
 
 
 
@@ -61,7 +72,7 @@ TOO_DARN_OLD=22500	# (NOTE: 22500 = 6.25 hours) - This is arbitrary, but was
 			# was flying at 80 mph to cross a 500 mile wide receiver
 			# field-of-view.  (Why? Because... science!....not)
 
-SLEEP_INTERVAL=4
+SLEEP_INTERVAL=29
 
 
 def init_display_vars():
@@ -137,6 +148,20 @@ def _calc_range_in_nm(from_lat, from_lon, to_lat, to_lon):
 
 
 
+def get_key(q,conn):
+    while 1:
+        # Block on any data arriving in the queue
+        indata = q.get()
+        # Write that data to socket
+        conn.sendall(indata)
+
+
+
+
+
+
+
+
 if (len(sys.argv) <2):
     sys.stderr.write('\nusage: {0} <ip_address[:port]> [<ip_address2[:port]>...]\n\n'.format(sys.argv[0]))
     sys.stderr.write("Port number is optional, with a default of 8080.\n")
@@ -169,6 +194,34 @@ if ((RX_LAT == NSN) | (RX_LON == NSN)):
     print '\nERROR: Receiver location unknown.\nExiting!'
     raise SystemExit
 
+
+
+
+# Setup the server socket
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+print 'Socket created'
+
+try:
+    s.bind((HOST, PORT))
+except socket.error, msg:
+    print 'Bind failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
+    sys.exit()
+
+print 'Socket bind complete'
+
+s.listen(10)
+print 'Socket is listening'
+
+# wait to accept a connection - blocking call
+conn, addr = s.accept()
+print 'Connected with ' + addr[0] + ':' + str(addr[1])
+
+
+# Start the socket-handling thread
+q = Queue.Queue()
+t = threading.Thread(target=get_key, args = (q,conn))
+t.daemon = True
+t.start()
 
 
 should_continue=1
@@ -231,14 +284,24 @@ while (should_continue == 1):
 
             ############# END OF PARSING THIS PLANE's DATA ###############
 
-            currdate="2017/06/06"
-            currtime="01:50:29.537"
+            now=datetime.datetime.now()
+            currdate=now.strftime('%Y/%m/%d')
+            currtime=now.strftime('%H:%M:%S.{0}').format(now.microsecond)[0:12]
+
+            if ((ICAO_HEX != NSN) & (CALLSIGN != '')):
+                msg1="MSG,1,1,1,{0},1,{1},{2},{1},{2},{3},,,,,,,,,,,0\n".format(ICAO_HEX, currdate, currtime,CALLSIGN)
+                sys.stdout.write(msg1)
+                q.put(msg1)
 
             if ((ICAO_HEX != NSN) & (LEVEL != NSN) & (LAT != NSN) & (LON != NSN)):
-                print "MSG,3,1,1,{0},1,{1},{2},{1},{2},,{3},,,{4},{5},,,,,,0".format(ICAO_HEX, currdate, currtime,LEVEL,LAT,LON)
+                msg3="MSG,3,1,1,{0},1,{1},{2},{1},{2},,{3},,,{4},{5},,,,,,0\n".format(ICAO_HEX, currdate, currtime,LEVEL,LAT,LON)
+                sys.stdout.write(msg3)
+                q.put(msg3)
 
             if ((ICAO_HEX != NSN) & (GSPD != NSN) & (TRACK!= NSN) & (VERT_RATE != NSN)):
-                print "MSG,4,1,1,{0},1,{1},{2},{1},{2},,,{3},{4},,,{5},,,,,0".format(ICAO_HEX,currdate,currtime,GSPD,TRACK,VERT_RATE)
+                msg4="MSG,4,1,1,{0},1,{1},{2},{1},{2},,,{3},{4},,,{5},,,,,0\n".format(ICAO_HEX,currdate,currtime,GSPD,TRACK,VERT_RATE)
+                sys.stdout.write(msg4)
+                q.put(msg4)
 
         # Done, for this line from the URL
 
@@ -247,6 +310,11 @@ while (should_continue == 1):
     time.sleep(SLEEP_INTERVAL)
 
 # End of while should_continue...
+
+
+# Close socket
+conn.close()
+s.close()
 
 
 raise SystemExit
@@ -278,3 +346,20 @@ raise SystemExit
 #      MSG,4,1,1,AD9E4D,1,2017/06/06,01:50:30.218,2017/06/06,01:50:30.249,,,453,245,,,-1664,,,,,0
 #      MSG,4,1,1,A46CE1,1,2017/06/06,01:50:30.219,2017/06/06,01:50:30.249,,,407,282,,,0,,,,,0
 #      MSG,4,1,1,48AE01,1,2017/06/06,01:50:30.239,2017/06/06,01:50:30.252,,,408,228,,,-896,,,,,0
+
+
+# now keep talking with the client
+while 1:
+    # wait to accept a connection - blocking call
+    conn, addr = s.accept()
+    print 'Connected with ' + addr[0] + ':' + str(addr[1])
+
+    data = conn.recv(1024)
+    reply = 'OK...' + data
+    if not data:
+        break
+
+    conn.sendall(reply)
+
+conn.close()
+s.close()
