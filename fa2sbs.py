@@ -6,6 +6,7 @@
 # HISTORICAL INFORMATION -
 #
 #  2017-06-05  msipin  Derived from pyson.py.
+#  2017-06-06  msipin  Added command-line specification of server port number.
 ############################################
 
 import sys
@@ -22,7 +23,7 @@ import threading
 
 
 HOST = ''  # Symbolic name meaning all available interfaces
-PORT = 3003  # Arbitrary non-privileged port
+#PORT = 3003  # Arbitrary non-privileged port
 
 
 
@@ -162,16 +163,21 @@ def get_key(q,conn):
 
 
 
-if (len(sys.argv) <2):
-    sys.stderr.write('\nusage: {0} <ip_address[:port]> [<ip_address2[:port]>...]\n\n'.format(sys.argv[0]))
-    sys.stderr.write("Port number is optional, with a default of 8080.\n")
+if (len(sys.argv) <3):
+    sys.stderr.write('\nusage: {0} <server_port_number> <ip_address[:port]> [<ip_address2[:port]>...]\n\n'.format(sys.argv[0]))
+    sys.stderr.write("server_port_number is required. This is where the program will serve up the data it retrieves.\n")
+    sys.stderr.write("At least one IP address is required.\n")
+    sys.stderr.write("Port number for any IP address is optional, with a default of 8080.\n")
     sys.stderr.write("If more than one IP address is provided, all range calculations will be based\n")
     sys.stderr.write("upon the location of the receiver at the first IP address provided.\n\n")
     raise SystemExit
 
+# Pick up Server Port Number
+PORT=int(sys.argv[1])
+
 # Pickup IP address
 NUMARGS=len(sys.argv)
-ARGNO=1
+ARGNO=2
 
 
 
@@ -199,7 +205,7 @@ if ((RX_LAT == NSN) | (RX_LON == NSN)):
 
 # Setup the server socket
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-print 'Socket created'
+#print 'Socket created'
 
 try:
     s.bind((HOST, PORT))
@@ -207,10 +213,10 @@ except socket.error, msg:
     print 'Bind failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
     sys.exit()
 
-print 'Socket bind complete'
+#print 'Socket bind to port {0} complete'.format(PORT)
 
 s.listen(10)
-print 'Socket is listening'
+print 'Server is listening on port {0}'.format(PORT)
 
 # wait to accept a connection - blocking call
 conn, addr = s.accept()
