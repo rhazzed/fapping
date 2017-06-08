@@ -73,7 +73,7 @@ TOO_DARN_OLD=22500	# (NOTE: 22500 = 6.25 hours) - This is arbitrary, but was
 			# was flying at 80 mph to cross a 500 mile wide receiver
 			# field-of-view.  (Why? Because... science!....not)
 
-SLEEP_INTERVAL=29
+SLEEP_INTERVAL=13
 
 
 def init_display_vars():
