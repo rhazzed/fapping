@@ -184,7 +184,7 @@ ARGNO=2
 
 
 # Pickup receiver lat/lon from the FIRST (and possibly only) IP address given on the command line
-# { "version" : "3.5.0", "refresh" : 1000, "history" : 120, "lat" : 34.492610, "lon" : -117.407060 }
+# { "version" : "3.5.0", "refresh" : 1000, "history" : 120, "lat" : 32.1219, "lon" : -38.854451 }
 if (sys.argv[ARGNO].find(":") == -1):
     url = "http://" + sys.argv[ARGNO] + ":8080/dump1090-fa/data/receiver.json"
 else:
