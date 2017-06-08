@@ -7,6 +7,9 @@
 #
 #  2017-06-05  msipin  Derived from pyson.py.
 #  2017-06-06  msipin  Added command-line specification of server port number.
+#  2017-06-08  msipin  Calculated  real "time seen" and submitted that along with plane data (*was*
+#                      just using current time for both "seen" and "submitted"). This is to correct
+#                      a tracking error when my posts are intermixed with others'.
 ############################################
 
 import sys
@@ -21,9 +24,12 @@ import Queue
 import threading
 
 
+GO_LIVE=1      # Set to "1" if you want to "GO LIVE!" (e.g. start the socket server, wait for a connection, etc...)
+               # Set to "0" if you want to debug this program (prevents socket server etc. from being started)
+
+
 
 HOST = ''  # Symbolic name meaning all available interfaces
-#PORT = 3003  # Arbitrary non-privileged port
 
 
 
@@ -60,18 +66,6 @@ RSSI=NSN
 RANGE=NSN
 AGE=NSN
 
-# How old (in seconds) a reading can be before we consider
-# it no longer valid for display purposes
-max_age = 120
-
-# How old (in seconds) an aircraft data db entry can be before
-# we completely remove it from the database
-#TOO_DARN_OLD=60	# TEST VALUE!
-#TOO_DARN_OLD=120	# TEST VALUE!
-TOO_DARN_OLD=22500	# (NOTE: 22500 = 6.25 hours) - This is arbitrary, but was
-			# developed by calculating how long it would take a UAV that
-			# was flying at 80 mph to cross a 500 mile wide receiver
-			# field-of-view.  (Why? Because... science!....not)
 
 SLEEP_INTERVAL=13
 
@@ -149,12 +143,17 @@ def _calc_range_in_nm(from_lat, from_lon, to_lat, to_lon):
 
 
 
-def get_key(q,conn):
+def get_key(q,conn,live):
     while 1:
         # Block on any data arriving in the queue
         indata = q.get()
-        # Write that data to socket
-        conn.sendall(indata)
+        # If "Live", write all data to the socket
+        if (live):
+            # Write that data to socket
+            conn.sendall(indata)
+        else:
+            # Write data to stdout
+            sys.stdout.write(indata)
 
 
 
@@ -202,7 +201,6 @@ if ((RX_LAT == NSN) | (RX_LON == NSN)):
 
 
 
-
 # Setup the server socket
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 #print 'Socket created'
@@ -218,14 +216,21 @@ except socket.error, msg:
 s.listen(10)
 print 'Server is listening on port {0}'.format(PORT)
 
-# wait to accept a connection - blocking call
-conn, addr = s.accept()
-print 'Connected with ' + addr[0] + ':' + str(addr[1])
+conn=0
+addr=0
+if (GO_LIVE):
+    # wait to accept a connection - blocking call
+    conn, addr = s.accept()
+    print 'Connected with ' + addr[0] + ':' + str(addr[1])
+else:
+    print 'Connected with (self - for DEBUGGING!)'
+
+# End if-go-live!
 
 
 # Start the socket-handling thread
 q = Queue.Queue()
-t = threading.Thread(target=get_key, args = (q,conn))
+t = threading.Thread(target=get_key, args = (q,conn,GO_LIVE))
 t.daemon = True
 t.start()
 
@@ -242,8 +247,15 @@ while (should_continue == 1):
         else:
           url = "http://" + sys.argv[idx] + "/dump1090-fa/data/aircraft.json"
 
-        response = urllib.urlopen(url)
-        d = json.loads(response.read())['aircraft']
+        try:
+            response = urllib.urlopen(url)
+            d = json.loads(response.read())['aircraft']
+        except:
+            print '\n***Error reading URL: {0}'.format(url)
+            d=''
+
+        urlreceived = datetime.datetime.now()
+
         #print '\n'
         #print d
         #print 'Length of dictionary: %d\n' % len(d)
@@ -294,20 +306,30 @@ while (should_continue == 1):
             currdate=now.strftime('%Y/%m/%d')
             currtime=now.strftime('%H:%M:%S.{0}').format(now.microsecond)[0:12]
 
+            # If AGE is NSN, treat it as if it were "zero"
+            if (AGE == NSN):
+                AGE=0
+            then=urlreceived - datetime.timedelta(seconds=int(AGE))
+            thendate=then.strftime('%Y/%m/%d')
+            thentime=then.strftime('%H:%M:%S.{0}').format(now.microsecond)[0:12]
+
             if ((ICAO_HEX != NSN) & (CALLSIGN != '')):
-                msg1="MSG,1,1,1,{0},1,{1},{2},{1},{2},{3},,,,,,,,,,,0\n".format(ICAO_HEX, currdate, currtime,CALLSIGN)
-                sys.stdout.write(msg1)
+                msg1="MSG,1,1,1,{0},1,{1},{2},{4},{5},{3},,,,,,,,,,,0\n".format(ICAO_HEX, thendate, thentime,CALLSIGN, currdate, currtime)
                 q.put(msg1)
+                if (GO_LIVE):
+                    sys.stdout.write(msg1)
 
             if ((ICAO_HEX != NSN) & (LEVEL != NSN) & (LAT != NSN) & (LON != NSN)):
-                msg3="MSG,3,1,1,{0},1,{1},{2},{1},{2},,{3},,,{4},{5},,,,,,0\n".format(ICAO_HEX, currdate, currtime,LEVEL,LAT,LON)
-                sys.stdout.write(msg3)
+                msg3="MSG,3,1,1,{0},1,{1},{2},{6},{7},,{3},,,{4},{5},,,,,,0\n".format(ICAO_HEX, thendate, thentime,LEVEL,LAT,LON, currdate, currtime)
                 q.put(msg3)
+                if (GO_LIVE):
+                    sys.stdout.write(msg3)
 
             if ((ICAO_HEX != NSN) & (GSPD != NSN) & (TRACK!= NSN) & (VERT_RATE != NSN)):
-                msg4="MSG,4,1,1,{0},1,{1},{2},{1},{2},,,{3},{4},,,{5},,,,,0\n".format(ICAO_HEX,currdate,currtime,GSPD,TRACK,VERT_RATE)
-                sys.stdout.write(msg4)
+                msg4="MSG,4,1,1,{0},1,{1},{2},{6},{7},,,{3},{4},,,{5},,,,,0\n".format(ICAO_HEX,thendate,thentime,GSPD,TRACK,VERT_RATE,currdate,currtime)
                 q.put(msg4)
+                if (GO_LIVE):
+                    sys.stdout.write(msg4)
 
         # Done, for this line from the URL
 
@@ -319,53 +341,10 @@ while (should_continue == 1):
 
 
 # Close socket
-conn.close()
+if (GO_LIVE):
+    conn.close()
 s.close()
 
 
 raise SystemExit
 
-
-
-# print "MSG,3,1,1,<ICAO>,1,date_gen  ,time_gen    ,date_logd ,time_logged ,,<ALT>,,,<LAT>,<LON>,,,,,,0"
-#      MSG,3,1,1,A4D9A7,1,2017/06/06,01:50:29.537,2017/06/06,01:50:29.591,,10000,,,34.29584,-117.34615,,,,,,0
-#      MSG,3,1,1,3C4B04,1,2017/06/06,01:50:30.143,2017/06/06,01:50:30.192,,29850,,,35.32915,-116.18580,,,,,,0
-#      MSG,3,1,1,A1013A,1,2017/06/06,01:50:30.155,2017/06/06,01:50:30.193,,4900,,,34.70975,-118.20028,,,,,,
-#      MSG,3,1,1,AA7E79,1,2017/06/06,01:50:30.157,2017/06/06,01:50:30.193,,33000,,,35.16589,-120.26711,,,,,,0
-#      MSG,3,1,1,AB20C0,1,2017/06/06,01:50:30.157,2017/06/06,01:50:30.193,,20000,,,35.62652,-119.88001,,,,,,0
-#      MSG,3,1,1,406D4C,1,2017/06/06,01:50:30.178,2017/06/06,01:50:30.196,,22875,,,34.25388,-117.53305,,,,,,0
-#      MSG,3,1,1,A1D873,1,2017/06/06,01:50:30.213,2017/06/06,01:50:30.249,,28950,,,33.49841,-116.77560,,,,,,0
-#      MSG,3,1,1,AA7734,1,2017/06/06,01:50:30.239,2017/06/06,01:50:30.252,,26125,,,34.37403,-119.31971,,,,,,0
-#      MSG,3,1,1,A34209,1,2017/06/06,01:50:30.251,2017/06/06,01:50:30.301,,38000,,,37.98505,-117.94466,,,,,,0
-
-# print "MSG,4,1,1,<ICAO>,1,date_gen  ,time_gen    ,date_logd ,time_logged ,,,<GSPD>,<TRK>,,,<VERT_RATE>,,,,,0"
-#      MSG,4,1,1,AA3417,1,2017/06/06,01:50:29.557,2017/06/06,01:50:29.593,,,516,52,,,1152,,,,,0
-#      MSG,4,1,1,A4BC10,1,2017/06/06,01:50:30.136,2017/06/06,01:50:30.191,,,439,316,,,1024,,,,,0
-#      MSG,4,1,1,ACB1E5,1,2017/06/06,01:50:30.143,2017/06/06,01:50:30.192,,,376,238,,,-1024,,,,,0
-#      MSG,4,1,1,3C4B04,1,2017/06/06,01:50:30.143,2017/06/06,01:50:30.192,,,524,48,,,1024,,,,,0
-#      MSG,4,1,1,A83988,1,2017/06/06,01:50:30.146,2017/06/06,01:50:30.192,,,467,133,,,-960,,,,,0
-#      MSG,4,1,1,AB77EE,1,2017/06/06,01:50:30.147,2017/06/06,01:50:30.192,,,364,245,,,-896,,,,,0
-#      MSG,4,1,1,A3E6C9,1,2017/06/06,01:50:30.148,2017/06/06,01:50:30.192,,,291,168,,,0,,,,,0
-#      MSG,4,1,1,A4D9A7,1,2017/06/06,01:50:30.177,2017/06/06,01:50:30.196,,,286,137,,,-1024,,,,,0
-#      MSG,4,1,1,406D4C,1,2017/06/06,01:50:30.179,2017/06/06,01:50:30.196,,,503,51,,,1280,,,,,0
-#      MSG,4,1,1,A9D5DF,1,2017/06/06,01:50:30.190,2017/06/06,01:50:30.197,,,516,59,,,576,,,,,0
-#      MSG,4,1,1,AD9E4D,1,2017/06/06,01:50:30.218,2017/06/06,01:50:30.249,,,453,245,,,-1664,,,,,0
-#      MSG,4,1,1,A46CE1,1,2017/06/06,01:50:30.219,2017/06/06,01:50:30.249,,,407,282,,,0,,,,,0
-#      MSG,4,1,1,48AE01,1,2017/06/06,01:50:30.239,2017/06/06,01:50:30.252,,,408,228,,,-896,,,,,0
-
-
-# now keep talking with the client
-while 1:
-    # wait to accept a connection - blocking call
-    conn, addr = s.accept()
-    print 'Connected with ' + addr[0] + ':' + str(addr[1])
-
-    data = conn.recv(1024)
-    reply = 'OK...' + data
-    if not data:
-        break
-
-    conn.sendall(reply)
-
-conn.close()
-s.close()
