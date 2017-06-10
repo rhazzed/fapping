@@ -16,6 +16,7 @@
 #                      TO-DO: (there are more - search for "TO-DO:" in this code!)
 #  2017-06-03  msipin  Adapted to piAware already exposing the two files we need - receiver.json
 #                      and aircraft.json.
+#  2017-06-09  msipin  Updated range calculation with true Great Circle distance calculation.
 ############################################
 
 import sys, math, time
@@ -373,45 +374,46 @@ def _age_all_aircraft_data_by(conn2, c2, how_much):
     conn2.commit()
 
 
-def _calc_range_in_miles(from_lat, from_lon, to_lat, to_lon):
 
-    # TO-DO: Calculate this range value using "real" Great Circle maths
+def _calc_range_in_nm(x1, y1, x2, y2):
 
-    global NSN
+    distance2 = NSN
+    if ((x1 != NSN) & (y1 != NSN) & (x2 != NSN) & (y2 != NSN)):
+        # The following formulas assume that angles are expressed in radians.
+        # So convert to radians.
 
-    # (Approx.) Miles-per-degree of latitude/longitude - accuracy is
-    # not as important; only being used for rough estimation
-    # of RANGE, and for comparison in sort operations
-    mpd_lat = 69.0535  # Avg, equator-to-pole
-    mpd_lon = 53.0000  # At 40 degrees N/S
+        x1 = math.radians(x1)
+        y1 = math.radians(y1)
+        x2 = math.radians(x2)
+        y2 = math.radians(y2)
 
-    # CONVERT LAT+LONG into RANGE in miles
-    range = NSN
-    if ((from_lat != NSN) & (from_lon != NSN) & (to_lat != NSN) & (to_lon != NSN)):
-       dlat = from_lat - to_lat
-       # Calculate approximate distance (in miles) of delta in latitude
-       lat_delta_miles = dlat * mpd_lat
+        # Compute using the law of cosines.
 
-       dlon = from_lon - to_lon
-       # Calculate approximate distance (in miles) of delta in longitude
-       lon_delta_miles = dlon * mpd_lon
+        # Great circle distance in radians
+        angle1 = math.acos(math.sin(x1) * math.sin(x2) \
+                           + math.cos(x1) * math.cos(x2) * math.cos(y1 - y2))
 
-       # Calculate the approximate range (in nautical miles)
-       range = math.sqrt((lat_delta_miles * lat_delta_miles) + (lon_delta_miles * lon_delta_miles))
+        # Convert back to degrees.
+        angle1 = math.degrees(angle1)
 
-    return range
+        # Each degree on a great circle of Earth is 60 nautical miles.
+        distance1 = 60.0 * angle1
 
 
+        # Compute using the Haversine formula.
 
-def _calc_range_in_nm(from_lat, from_lon, to_lat, to_lon):
+        a = math.sin((x2 - x1) / 2.0) ** 2.0 \
+            + (math.cos(x1) * math.cos(x2) * (math.sin((y2 - y1) / 2.0) ** 2.0))
 
-    global NSN
+        # Great circle distance in radians
+        angle2 = 2.0 * math.asin(min(1.0, math.sqrt(a)))
 
-    range = NSN
-    range = _calc_range_in_miles(from_lat, from_lon, to_lat, to_lon)
-    if (range != NSN):
-        range = range * 0.868976    # 1 Mile is 0.868976 Nautical Miles
-    return range
+        # Convert back to degrees.
+        angle2 = math.degrees(angle2)
+
+        # Each degree on a great circle of Earth is 60 nautical miles.
+        distance2 = 60.0 * angle2
+    return distance2
 
 
 
