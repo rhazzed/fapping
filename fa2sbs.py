@@ -10,6 +10,7 @@
 #  2017-06-08  msipin  Calculated  real "time seen" and submitted that along with plane data (*was*
 #                      just using current time for both "seen" and "submitted"). This is to correct
 #                      a tracking error when my posts are intermixed with others'.
+#  2017-06-09  msipin  Removed unneeded functions.
 ############################################
 
 import sys
@@ -98,48 +99,6 @@ def init_display_vars():
     RSSI=NSN
     RANGE=NSN
     AGE=NSN
-
-
-
-def _calc_range_in_miles(from_lat, from_lon, to_lat, to_lon):
-
-    # TO-DO: Calculate this range value using "real" Great Circle maths
-
-    global NSN
-
-    # (Approx.) Miles-per-degree of latitude/longitude - accuracy is
-    # not as important; only being used for rough estimation
-    # of RANGE, and for comparison in sort operations
-    mpd_lat = 69.0535  # Avg, equator-to-pole
-    mpd_lon = 53.0000  # At 40 degrees N/S
-
-    # CONVERT LAT+LONG into RANGE in miles
-    range = NSN
-    if ((from_lat != NSN) & (from_lon != NSN) & (to_lat != NSN) & (to_lon != NSN)):
-       dlat = from_lat - to_lat
-       # Calculate approximate distance (in miles) of delta in latitude
-       lat_delta_miles = dlat * mpd_lat
-
-       dlon = from_lon - to_lon
-       # Calculate approximate distance (in miles) of delta in longitude
-       lon_delta_miles = dlon * mpd_lon
-
-       # Calculate the approximate range (in nautical miles)
-       range = math.sqrt((lat_delta_miles * lat_delta_miles) + (lon_delta_miles * lon_delta_miles))
-
-    return range
-
-
-
-def _calc_range_in_nm(from_lat, from_lon, to_lat, to_lon):
-
-    global NSN
-
-    range = NSN
-    range = _calc_range_in_miles(from_lat, from_lon, to_lat, to_lon)
-    if (range != NSN):
-        range = range * 0.868976    # 1 Mile is 0.868976 Nautical Miles
-    return range
 
 
 
