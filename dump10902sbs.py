@@ -120,13 +120,12 @@ def get_key(q,conn,live):
 
 
 
-if (len(sys.argv) <3):
-    sys.stderr.write('\nusage: {0} <server_port_number> <ip_address[:port]> [<ip_address2[:port]>...]\n\n'.format(sys.argv[0]))
+if (len(sys.argv) <5):
+    sys.stderr.write('\nusage: {0} <server_port_number> <receiver_lat> <receiver_long> <ip_address[:port]> [<ip_address2[:port]>...]\n\n'.format(sys.argv[0]))
     sys.stderr.write("server_port_number is required. This is where the program will serve up the data it retrieves.\n")
+    sys.stderr.write("receiver_lat and receiver_long are required. All range calculations will be based upon this position.\n\n")
     sys.stderr.write("At least one IP address is required.\n")
     sys.stderr.write("Port number for any IP address is optional, with a default of 8080.\n")
-    sys.stderr.write("If more than one IP address is provided, all range calculations will be based\n")
-    sys.stderr.write("upon the location of the receiver at the first IP address provided.\n\n")
     raise SystemExit
 
 # Pick up Server Port Number
@@ -134,28 +133,15 @@ PORT=int(sys.argv[1])
 
 # Pickup IP address
 NUMARGS=len(sys.argv)
-ARGNO=2
+ARGNO=4
 
 
 
-
-# Pickup receiver lat/lon from the FIRST (and possibly only) IP address given on the command line
-# { "version" : "3.5.0", "refresh" : 1000, "history" : 120, "lat" : 32.1219, "lon" : -38.854451 }
-if (sys.argv[ARGNO].find(":") == -1):
-    url = "http://" + sys.argv[ARGNO] + ":8080/dump1090-fa/data/receiver.json"
-else:
-    url = "http://" + sys.argv[ARGNO] + "/dump1090-fa/data/receiver.json"
-response = urllib.urlopen(url)
-line = json.loads(response.read())
-RX_LAT = line.get(KEY_LAT, NSN)
+# Pickup receiver lat/lon from the command line
+RX_LAT = float(sys.argv[2])
 #print '\tRX_LAT = %s' % RX_LAT
-RX_LON = line.get(KEY_LON, NSN)
+RX_LON = float(sys.argv[3])
 #print '\tRX_LON = %s' % RX_LON
-
-if ((RX_LAT == NSN) | (RX_LON == NSN)):
-    print '\nERROR: Receiver location unknown.\nExiting!'
-    raise SystemExit
-
 
 
 # Setup the server socket
@@ -194,8 +180,6 @@ t.start()
 
 should_continue=1
 
-# For this program, do NOT use ARGNO=2. This will only be used to pickup receiver (current) lat/long
-ARGNO=ARGNO + 1
 while (should_continue == 1):
 
 
@@ -286,7 +270,7 @@ while (should_continue == 1):
                 if (GO_LIVE):
                     sys.stdout.write(msg3)
 
-            if ((ICAO_HEX != NSN) & (GSPD != NSN) & (TRACK!= NSN) & (VERT_RATE != NSN)):
+            if ((ICAO_HEX != NSN) & (GSPD != NSN) & (TRACK!= NSN) & (VERT_RATE != NSN) & (GSPD != 0) & (TRACK!= 0) & (VERT_RATE != 0)):
                 msg4="MSG,4,1,1,{0},1,{1},{2},{6},{7},,,{3},{4},,,{5},,,,,0\n".format(ICAO_HEX,thendate,thentime,GSPD,TRACK,VERT_RATE,currdate,currtime)
                 q.put(msg4)
                 if (GO_LIVE):
