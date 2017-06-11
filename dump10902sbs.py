@@ -274,7 +274,7 @@ while (should_continue == 1):
                 if (GO_LIVE):
                     sys.stdout.write(msg1)
 
-            if ((ICAO_HEX != NSN) & (LEVEL != NSN) & (LAT != NSN) & (LON != NSN)):
+            if ((ICAO_HEX != NSN) & (LEVEL != NSN) & (LAT != NSN) & (LON != NSN) & (LAT != 0.000) & (LON != 0.000)):
                 msg3="MSG,3,1,1,{0},1,{1},{2},{6},{7},,{3},,,{4},{5},,,,,,0\n".format(ICAO_HEX, thendate, thentime,LEVEL,LAT,LON, currdate, currtime)
                 q.put(msg3)
                 if (GO_LIVE):
