@@ -46,6 +46,7 @@ KEY_VERT_RATE='vert_rate'
 KEY_SQUAWK='squawk'
 KEY_RSSI='rssi'
 KEY_AGE='seen'
+KEY_VALID_POSITION='validposition'
 
 # Global variables that will hold airplane attribute data (both for display and db writes/reads)
 ICAO_HEX=''
@@ -61,6 +62,7 @@ SQUAWK=NSN
 RSSI=NSN
 RANGE=NSN
 AGE=NSN
+VALID_POSITION=0
 
 
 SLEEP_INTERVAL=13
@@ -80,6 +82,7 @@ def init_display_vars():
     global RSSI 
     global RANGE
     global AGE
+    global VALID_POSITION
 
     ICAO_HEX=''
     ICAO_STR=''
@@ -94,6 +97,7 @@ def init_display_vars():
     RSSI=NSN
     RANGE=NSN
     AGE=NSN
+    VALID_POSITION=0
 
 
 
@@ -254,6 +258,8 @@ while (should_continue == 1):
             #print '\tRSSI = %s' % RSSI
             AGE = line.get(KEY_AGE, NSN)
             #print '\tAGE = %s' % AGE
+            VALID_POSITION = line.get(KEY_VALID_POSITION, 0)
+            #print '\tVALID_POSITION = %s' % VALID_POSITION
 
             ############# END OF PARSING THIS PLANE's DATA ###############
 
@@ -274,7 +280,7 @@ while (should_continue == 1):
                 if (GO_LIVE):
                     sys.stdout.write(msg1)
 
-            if ((ICAO_HEX != NSN) & (LEVEL != NSN) & (LAT != NSN) & (LON != NSN) & (LAT != 0.000) & (LON != 0.000)):
+            if ((ICAO_HEX != NSN) & (LEVEL != NSN) & (LAT != NSN) & (LON != NSN) & (VALID_POSITION == 1)):
                 msg3="MSG,3,1,1,{0},1,{1},{2},{6},{7},,{3},,,{4},{5},,,,,,0\n".format(ICAO_HEX, thendate, thentime,LEVEL,LAT,LON, currdate, currtime)
                 q.put(msg3)
                 if (GO_LIVE):
