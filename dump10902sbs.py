@@ -6,11 +6,12 @@
 # HISTORICAL INFORMATION -
 #
 #  2017-06-10  msipin  Derived from fa2sbs.py
+#  2017-06-11  msipin  Switched from urllib to urllib2
 ############################################
 
 import sys
 import math
-import urllib
+import urllib2
 import json
 import time
 import datetime
@@ -191,8 +192,14 @@ while (should_continue == 1):
           url = "http://" + sys.argv[idx] + "/dump1090/data.json"
 
         try:
-            response = urllib.urlopen(url)
+            #print "Reading url: {0}...".format(url)
+            response = urllib2.urlopen(url)
+            #print "URL opened..."
+            #x = response.read()
+            #print "Response read..."
+            #d = json.loads(x)
             d = json.loads(response.read())
+            #print "JSON data loaded."
         except:
             print '\n***Error reading URL: {0}'.format(url)
             d=''
@@ -209,8 +216,8 @@ while (should_continue == 1):
 
             #print '\nRead line - %s' % line
             #for key in line:
-               #print 'key = %s   ' % key
-               #print 'value = %s\n' % line[key]
+            #   print 'key = %s   ' % key
+            #   print 'value = %s\n' % line[key]
 
             # Initialize all displayable variables before reading new ones
             init_display_vars()
@@ -281,6 +288,7 @@ while (should_continue == 1):
     # Done, for each IP address given on the command line
 
     time.sleep(SLEEP_INTERVAL)
+    #should_continue=0
 
 # End of while should_continue...
 

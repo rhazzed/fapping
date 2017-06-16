@@ -11,11 +11,12 @@
 #                      just using current time for both "seen" and "submitted"). This is to correct
 #                      a tracking error when my posts are intermixed with others'.
 #  2017-06-09  msipin  Removed unneeded functions.
+#  2017-06-11  msipin  Switched from urllib to urllib2
 ############################################
 
 import sys
 import math
-import urllib
+import urllib2
 import json
 import time
 import datetime
@@ -147,7 +148,7 @@ if (sys.argv[ARGNO].find(":") == -1):
     url = "http://" + sys.argv[ARGNO] + ":8080/dump1090-fa/data/receiver.json"
 else:
     url = "http://" + sys.argv[ARGNO] + "/dump1090-fa/data/receiver.json"
-response = urllib.urlopen(url)
+response = urllib2.urlopen(url)
 line = json.loads(response.read())
 RX_LAT = line.get(KEY_LAT, NSN)
 #print '\tRX_LAT = %s' % RX_LAT
@@ -207,7 +208,7 @@ while (should_continue == 1):
           url = "http://" + sys.argv[idx] + "/dump1090-fa/data/aircraft.json"
 
         try:
-            response = urllib.urlopen(url)
+            response = urllib2.urlopen(url)
             d = json.loads(response.read())['aircraft']
         except:
             print '\n***Error reading URL: {0}'.format(url)
