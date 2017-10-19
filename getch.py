@@ -83,8 +83,8 @@ if __name__ == '__main__': # a little test
     t.start()
 
     while q.empty():
-        print "Nothin in the queue yet...\r\n"
+        print ("Nothin in the queue yet...\r\n")
         sys.stdout.flush()
         time.sleep(1)
     s = q.get()
-    print "Found {} in the queue!".format(s)
+    print ("Found {} in the queue!".format(s))
