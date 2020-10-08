@@ -9,7 +9,7 @@
 #  2020-10-07  msipin  Created.
 #################################
 
-IFACE=wlan0
+IFACE="wlan0"
 SUBNET="192.168."
 
 
