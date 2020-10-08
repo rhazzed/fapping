@@ -691,7 +691,10 @@ while (should_continue == 1):
         sys.stdout.write('{:4s}'.format(''))
     sys.stdout.write('|')
     if (TRACK != NSN):
-        sys.stdout.write('{:4d}'.format(TRACK))
+        try:
+	    sys.stdout.write('{:4d}'.format(TRACK))
+	except:
+	    sys.stdout.write('{:4.0f}'.format(TRACK))
     else:
         sys.stdout.write('{:4s}'.format(''))
     sys.stdout.write('|')
