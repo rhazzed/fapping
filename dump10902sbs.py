@@ -7,6 +7,7 @@
 #
 #  2017-06-10  msipin  Derived from fa2sbs.py
 #  2017-06-11  msipin  Switched from urllib to urllib2
+#  2020-10-09  msipin  Changed altitude key from "altitude" to "alt_baro" due to post-2017 PiAware change
 ############################################
 
 import sys
@@ -38,7 +39,8 @@ NSN=424242424242
 # JSON field names - as defined by PiAware's read-from-airplane-data-URL functionality
 KEY_ICAO='hex'
 KEY_CALLSIGN='flight'
-KEY_LEVEL='altitude'
+#KEY_LEVEL='altitude' # 2017 key
+KEY_LEVEL='alt_baro' # Post-2017 key (don't know when it changed...)
 KEY_GSPD='speed'
 KEY_TRACK='track'
 KEY_LAT='lat'

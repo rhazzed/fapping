@@ -9,7 +9,8 @@
 #  2020-10-07  msipin  Created.
 #################################
 
-IFACE="wlan0"
+#IFACE="wlan0"
+IFACE="eth0"
 SUBNET="192.168."
 
 
@@ -20,7 +21,6 @@ sleep 120
 
 while [ 1 ]
 do
-
     cnt=`ifconfig ${IFACE} | grep inet.addr | grep -c ${SUBNET}`
 
     if [ ""$cnt"" -ne 1 ]
@@ -28,22 +28,18 @@ do
 	echo "`date` - $IFACE is not currently associated with a ${SUBNET}.. subnet!"
 
 	# Bring interface down
-	ifdown ${IFACE} >/dev/null 2>&1
+	ifdown --force ${IFACE} >/dev/null 2>&1
 
 	# Wait a bit to let interface settle
 	sleep 10
 
 	# Bring interface back up
-	ifup ${IFACE} >/dev/null 2>&1
+	ifup --force ${IFACE} >/dev/null 2>&1
 
-	# Sleep a bit to give interface the chance to reassociate
-	sleep 40
-    else
-	#echo "`date` - ${IFACE} *is* currently associated with a ${SUBNET} subnet."
-
-	# Sleep until time to check again
-	sleep 60
     fi
+
+    # Sleep a while to let any changes propagate
+    sleep 40
 
 done
 

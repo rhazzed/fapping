@@ -28,6 +28,9 @@
 #  2017-05-15  msipin  Cleared out the screen "every once in a while" (vs just moving the cursor
 #                      to "home" (top-left of screen). Better-formatted header and footer information.
 #  2017-05-21  msipin  Changed "all" plot grid to 500x500 miles.
+#  2020-10-09  msipin  Adapted to altitude attribute being changed from simply "altitude" (circa
+#                      2017) to being split out (at some post post-2017) into "alt_baro" (barometric
+#                      altitude) and "alt_geo".
 ############################################
 
 import sys
@@ -54,7 +57,8 @@ rssi_chars = ['9','9','8','8','8','7','7','7','6','6','6','5','5', \
 '5','4','4','4','3','3','3','2','2','2','1','1','1' ]
 rss_min = -33.0	# Minumum RSSI for "bucketing" purposes
 rss_max = -6.0		# Maximum RSSI for "bucketing" purposes
-rss_buckets = 26	# NOTE: THIS *MUST* MATCH the rssi_chars array size!
+rss_buckets = len(rssi_chars)	# NOTE: THIS *MUST* MATCH the rssi_chars array size!
+
 
 # Delta-per-bucket for RSSI
 rss_bd = (rss_min - rss_max)/rss_buckets
@@ -225,8 +229,8 @@ while met_criteria == 0:
     # Add aircraft from this file to total-found
     total_aircraft += num_found
 
-    #features = ['rssi', 'seen', 'lat', 'lon', 'altitude', 'track', 'messages' ]
-    #features = [ 'altitude', 'messages' ]
+    #features = ['rssi', 'seen', 'lat', 'lon', 'alt_baro', 'track', 'messages' ]
+    #features = [ 'alt_baro', 'messages' ]
     for i in range(0, num_found):
         if 'rssi' in data['aircraft'][i] \
 and data['aircraft'][i]['rssi'] > -49.5 \
@@ -285,8 +289,8 @@ and data['aircraft'][i]['seen'] <= max_age:
 
 	    # Calculate altitude character
 	    alt_idx = 0
-	    if 'altitude' in data['aircraft'][i]:
-	        alt = data['aircraft'][i]['altitude']
+	    if 'alt_baro' in data['aircraft'][i]:
+	        alt = data['aircraft'][i]['alt_baro']
 	        if alt >= 40000:
 		    alt_idx  = 10
 	        elif alt >= 35000:
