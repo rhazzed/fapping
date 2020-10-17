@@ -14,6 +14,7 @@
 #  2017-06-03  msipin  Adapted to piAware already exposing the two files we need -
 #                      receiver.json and aircraft.json.
 #     NOTE: THIS ELIMINATES THE lighttpd ENTRY REQUIRED BY THE 2017-05-26 RELEASE!!
+#  2020-10-09  msipin  Changed altitude key from "altitude" to "alt_baro" due to post-2017 PiAware change
 #######################################################
 
 tmp_file1=/var/tmp/$$.ason.1
@@ -136,8 +137,8 @@ for (i=1; i<= NF; i++) {
   # CALLSIGN = flight:AAL1024
   if ($1 == "flight") CALLSIGN=$2
 
-  # LEVEL = altitude:8575
-  if ($1 == "altitude") LEVEL=$2
+  # LEVEL = alt_baro:8575
+  if ($1 == "alt_baro") LEVEL=$2
 
   # GSPD = speed:125
   if ($1 == "speed") GSPD=$2

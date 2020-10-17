@@ -17,6 +17,7 @@
 #  2017-06-03  msipin  Adapted to piAware already exposing the two files we need - receiver.json
 #                      and aircraft.json.
 #  2017-06-09  msipin  Updated range calculation with true Great Circle distance calculation.
+#  2020-10-09  msipin  Changed altitude key from "altitude" to "alt_baro" due to post-2017 PiAware change
 ############################################
 
 import sys, math, time
@@ -49,7 +50,7 @@ NSN=424242424242
 # JSON field names - as defined by PiAware's read-from-airplane-data-URL functionality
 KEY_ICAO='hex'
 KEY_CALLSIGN='flight'
-KEY_LEVEL='altitude'
+KEY_LEVEL='alt_baro'
 KEY_GSPD='speed'
 KEY_TRACK='track'
 KEY_LAT='lat'
