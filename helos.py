@@ -32,13 +32,8 @@ mpd_lon = 53.0000	# At 40 degrees N/S
 # DEFAULT TO 10 MINUTES?
 max_age = (10*60.0)
 
-
-# Distance (in miles) to divide display into (left-right, and up-down)
-graph_width = 300	# Distance in miles (I personally like 300 miles!)
-graph_height = 300	# Distance in miles (I personally like 300 miles!)
-
-# Set to 1 if we should display the altitude indicators
-show_altitude = 1
+# Date that file was created
+file_date = 0;
 
 # Set to 1 if we should continuously refresh the display
 continuous = 0
@@ -63,7 +58,9 @@ signal.signal(signal.SIGINT, Exit_gracefully)
 
 
 # The most recent aircraft signal-report file -
-aircraft_files = [ '/run/dump1090-fa/aircraft.json' ]
+#aircraft_files = [ '/run/dump1090-fa/aircraft.json' ]
+aircraft_files = glob.glob('/run/dump1090-fa/history*.json')
+aircraft_files.append('/run/dump1090-fa/aircraft.json')
 
 
 # Get position of receiver ("site")
@@ -87,6 +84,9 @@ else:
 
 
 
+now = time.time()
+#print "\nTIME_NOW: ", now
+
 met_criteria=0
 total_aircraft=0
 while met_criteria == 0:
@@ -105,40 +105,40 @@ while met_criteria == 0:
     #pprint(data)
     aircraft_data.close()
 
+    # Pickup file-creation date
+    file_date = data['now']
+    #print "\nFile-creation date: ", file_date
+
+
     # Figure out how many aircraft are in this file
     num_found = len(data['aircraft'])
 
-    print "\nNumber of Aircraft parsed: ", num_found
+    #print "\nNumber of Aircraft parsed: ", num_found
 
     # Add aircraft from this file to total-found
     total_aircraft += num_found
 
-    features = ['hex', 'flight', 'seen', 'lat', 'lon', 'alt_baro', 'category' ]
+    features = [ 'hex', 'flight', 'lat', 'lon', 'alt_baro' ]
     for i in range(0, num_found):
         if 'rssi' in data['aircraft'][i] \
 and data['aircraft'][i]['rssi'] > -49.5 \
 and 'seen' in data['aircraft'][i] \
-and 'lat' in data['aircraft'][i] \
-and 'lon' in data['aircraft'][i] \
 and 'category' in data['aircraft'][i] \
-and data['aircraft'][i]['category'] == "A7" \
-and data['aircraft'][i]['seen'] <= max_age:
-            print "\nAircraft[", i, "] - "
+and data['aircraft'][i]['category'] == "A7":
+
+            seen = file_date - data['aircraft'][i]['seen']
+            age = now - seen
+            print "\n", age,
+
+
+            #print "\nAircraft[", i, "] - ",
             met_criteria += 1
             for feature in features:
 	        if feature in data['aircraft'][i]:
-	            print "    ", feature, ": ", data['aircraft'][i][feature]
+	            print " ", feature, ": ", data['aircraft'][i][feature],
+	        else:
+	            print " ", feature, ": ", " unk ",
 
-	    # longitude
-	    lon = data['aircraft'][i]['lon']
-
-	    # latitude
-	    lat = data['aircraft'][i]['lat']
-
-	    # altitude
-	    if 'alt_baro' in data['aircraft'][i]:
-	        alt = data['aircraft'][i]['alt_baro']
-	
     # End, processing of this one file is complete
 
   # End, processing of all aircraft files are complete
@@ -194,4 +194,34 @@ raise SystemExit
 #      
 # HELICOPTER IN NEXT LINE -
 #      {"hex":"a8aa7e","flight":"N658AM  ","alt_baro":"ground","gs":0.0,"track":278.4,"squawk":"1200","emergency":"none","category":"A7","lat":34.587987,"lon":-117.375355,"nic":9,"rc":75,"seen_pos":27.9,"version":2,"nac_p":10,"nac_v":2,"sil":3,"sil_type":"perhour","sda":2,"mlat":[],"tisb":[],"messages":5272,"seen":27.9,"rssi":-19.2},
+
+
+
+#  File-creation date:  1603134762.1
+#  
+#  Number of Aircraft parsed:  140
+#  
+#  Aircraft[ 38 ] -
+#     hex :  ab6c7f
+#     flight :  N835SB
+#     seen :  0.4
+#     lat :  34.498077
+#     lon :  -117.397324
+#     alt_baro :  3550
+#     category :  A7
+#
+#
+#  File-creation date:  1603134801.5
+#
+#  Number of Aircraft parsed:  136
+#
+#  Aircraft[ 42 ] -
+#     hex :  ab6c7f
+#     flight :  N835SB
+#     seen :  0.1
+#     lat :  34.518814
+#     lon :  -117.396988
+#     alt_baro :  3525
+#     category :  A7
+#
 
