@@ -62,11 +62,6 @@ signal.signal(signal.SIGINT, Exit_gracefully)
 signal.signal(signal.SIGINT, Exit_gracefully)
 
 
-# The most recent aircraft signal-report file -
-#aircraft_files = [ '/run/dump1090-fa/aircraft.json' ]
-aircraft_files = glob.glob('/run/dump1090-fa/history*.json')
-aircraft_files.append('/run/dump1090-fa/aircraft.json')
-
 
 # Get position of receiver ("site")
 site_file = '/run/dump1090-fa/receiver.json'
@@ -89,22 +84,28 @@ else:
 
 
 
-now = time.time()
-print "\nTIME_NOW: ", now
-print "TIME_NOW: ",datetime.datetime.utcfromtimestamp(now)
-
-max_age = now - max_age 
-#print "\nMAX_AGE:  ", max_age
-print "\nMAX_AGE:  ", max_age
-print "MAX_AGE:  ", datetime.datetime.utcfromtimestamp(max_age)
-
 
 met_criteria=0
 total_aircraft=0
 while met_criteria == 0:
 
+  now = time.time()
+  print "\nTIME_NOW: ", now
+  print "TIME_NOW: ",datetime.datetime.utcfromtimestamp(now)
+
+  max_age = now - max_age 
+  #print "\nMAX_AGE:  ", max_age
+  print "\nMAX_AGE:  ", max_age
+  print "MAX_AGE:  ", datetime.datetime.utcfromtimestamp(max_age)
+
   # Dictionary of all helicopter data
   helo_dict = {}
+
+  # The most recent aircraft signal-report file -
+  #aircraft_files = [ '/run/dump1090-fa/aircraft.json' ]
+  aircraft_files = glob.glob('/run/dump1090-fa/history*.json')
+  aircraft_files.append('/run/dump1090-fa/aircraft.json')
+
 
   for aircraft_file in aircraft_files:
 
@@ -243,22 +244,22 @@ and age > helo_dict[hex]['newest_pos']['age']:
   # Look through helo_dict
   # For each entry in helo_dict
   for key in helo_dict.keys():
-      # If newest_age > oldest_age:
-      if helo_dict[key]['newest_age'] > (helo_dict[key]['oldest_age'] - age_tolerance):
-          # This sighting is new. See if it's recent enough to alert on
 
-          print "\n\tHex: ",key
-          print "\tOldest: ",datetime.datetime.utcfromtimestamp(helo_dict[key]['oldest_age'])
-          print "\tNewest: ",datetime.datetime.utcfromtimestamp(helo_dict[key]['newest_age'])
+      print "\n\tHex: ",key
+      print "\tOldest: ",datetime.datetime.utcfromtimestamp(helo_dict[key]['oldest_age'])
+      print "\tNewest: ",datetime.datetime.utcfromtimestamp(helo_dict[key]['newest_age'])
 
+      # If newest_age is "recent enough"...
+      if helo_dict[key]['newest_age'] > (now - age_tolerance):
+          # This sighting is new. See if it's been alerted on before
 
           if helo_dict[key]['oldest_age'] > (now - age_tolerance):
               print "\n\t**** ALERT: NEW AIRCRAFT: ",key
           else:
-              print "\t     Already-alerted on: ",key
+              print "\t     Already alerted on: ",key
       else:
           # We've seen this aircraft before. Don't alert on it
-          print "\n\t      Re-sighting of: ",key
+          print "\t     Old sighting of: ",key
 
           '''
 {u'a8aa7e': {'hex': u'a8aa7e',
@@ -374,5 +375,34 @@ EXAMPLE OUTPUT (so far) -
 Keep oldest age for hex
 Keep newest lat/long/alt for hex
 keep newest age for hex
+
+
+{u'aae0c2': {'hex': u'aae0c2',
+             'newest_age': 1603215594.1000001,
+             'newest_pos': {'age': 1603215594.1000001,
+                            'alt': 5700,
+                            'lat': 34.145325,
+                            'lon': -117.485831},
+             'oldest_age': 1603214666.9},
+ u'ab7036': {'hex': u'ab7036',
+             'newest_age': 1603216152.6000001,
+             'newest_pos': {'age': 1603216152.6000001,
+                            'alt': 5750,
+                            'lat': 34.20369,
+                            'lon': -117.522041},
+             'oldest_age': 1603216108.6}}
+
+        Hex:  aae0c2
+        Oldest:  2020-10-20 17:24:26.900000
+        Newest:  2020-10-20 17:39:54.100000
+             Already alerted on:  aae0c2
+
+        Hex:  ab7036
+        Oldest:  2020-10-20 17:48:28.600000
+        Newest:  2020-10-20 17:49:12.600000
+
+        **** ALERT: NEW AIRCRAFT:  ab7036
+
+Tue Oct 20 17:56:30 2020 GMT     Aircraft: 38/13854
 
 '''
