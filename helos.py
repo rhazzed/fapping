@@ -31,8 +31,8 @@ mpd_lon = 53.0000	# At 40 degrees N/S
 # it no longer valid for our purposes
 #
 # DEFAULT TO 30 MINUTES?
-max_age = (30.0*60.0)	# 30 mins - use for Production
-#max_age = (24.0*60.0*60.0)	# Use for testing
+MAX_AGE = (30.0*60.0)	# 30 mins - use for Production
+#MAX_AGE = (24.0*60.0*60.0)	# Use for testing
 
 # Age tolerance for alerting - Consider all alerts within this period to be "the same"
 age_tolerance = (5*60)  # 5 minutes either way
@@ -93,7 +93,7 @@ while met_criteria == 0:
   print "\nTIME_NOW: ", now
   print "TIME_NOW: ",datetime.datetime.utcfromtimestamp(now)
 
-  max_age = now - max_age 
+  max_age = now - MAX_AGE 
   #print "\nMAX_AGE:  ", max_age
   print "\nMAX_AGE:  ", max_age
   print "MAX_AGE:  ", datetime.datetime.utcfromtimestamp(max_age)
