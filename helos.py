@@ -216,6 +216,7 @@ and age > helo_dict[hex]['newest_pos']['age']:
 
   # Done looking through all aircraft for candidates
 
+  print "\n"
   pprint(helo_dict)
 
   # Look through helo_dict
@@ -223,8 +224,11 @@ and age > helo_dict[hex]['newest_pos']['age']:
   for key in helo_dict.keys():
       # If newest_age > oldest_age:
       if helo_dict[key]['newest_age'] > (helo_dict[key]['oldest_age'] - age_tolerance):
-          # This sighting is new. ALERT ON IT!
-          print "\n\t**** ALERT: NEW HELO: ",key
+          # This sighting is new. See if it's recent enough to alert on
+          if helo_dict[key]['newest_age'] > (now - age_tolerance):
+              print "\n\t**** ALERT: NEW HELO: ",key
+          else:
+              print "\n\t     New, but already-alerted on helo: ",key
       else:
           # We've seen this aircraft before. Don't alert on it
           print "\n\t      Re-sighting of: ",key
