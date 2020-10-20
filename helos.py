@@ -187,6 +187,7 @@ and 'category' in data['aircraft'][i] and data['aircraft'][i]['category'] == "A7
                   # Create default aircraft info
                   aircraft = {
                       'hex': hex,
+                      'flight': 'unk',
                       'oldest_age': 9999999999,
                       'newest_pos': pos,
                       'newest_age': -9999999999
@@ -223,6 +224,20 @@ and 'category' in data['aircraft'][i] and data['aircraft'][i]['category'] == "A7
                      print "  was oldest: ", datetime.datetime.utcfromtimestamp(helo_dict[hex]['oldest_age'])
                   except:
                       print "unk"
+
+                  flight = helo_dict[hex]['flight']
+                  #print "DEBUG: flight was   : ",flight
+                  try:
+                     if data['aircraft'][i]['flight'] != "unk":
+                        #print "DEBUG: found flight attribute!"
+                        flight = data['aircraft'][i]['flight']
+                        #print "DEBUG: flight now is: ",flight
+                        helo_dict[hex]['flight'] = flight
+                  except:
+                     # Do nothing...
+                     print "      no flight number"
+                  print "      flight: ", flight
+
   
                   # Keep oldest age for hex
                   if age < helo_dict[hex]['oldest_age']:
@@ -287,7 +302,8 @@ and age > helo_dict[hex]['newest_pos']['age']:
                     smtp_python2.py <email_addr> "Aircraft Alert!"
                 '''
                 for email_addr in email_list:
-                    cmd = './smtp_python2.py ' + email_addr + ' "Aircraft hex: ' + key + ' alert from PiAware"'
+                    flight = helo_dict[key]['flight']
+                    cmd = './smtp_python2.py ' + email_addr + ' "Tail: ' + flight + ' reg: ' + key + ' spotted!"'
                     print "DEBUG: cmd["+cmd+"]"
                     returned_value = subprocess.call(cmd, shell=True)  # returns the exit code in unix
                     print "\t\t** SYSTEM CALL RETURNED CODE: ", returned_value
