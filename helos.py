@@ -247,14 +247,15 @@ and age > helo_dict[hex]['newest_pos']['age']:
       if helo_dict[key]['newest_age'] > (helo_dict[key]['oldest_age'] - age_tolerance):
           # This sighting is new. See if it's recent enough to alert on
 
-          print "\n\tOldest: ",datetime.datetime.utcfromtimestamp(helo_dict[key]['oldest_age'])
+          print "\n\tHex: ",key
+          print "\tOldest: ",datetime.datetime.utcfromtimestamp(helo_dict[key]['oldest_age'])
           print "\tNewest: ",datetime.datetime.utcfromtimestamp(helo_dict[key]['newest_age'])
 
 
-          if helo_dict[key]['newest_age'] > (now - age_tolerance):
+          if helo_dict[key]['oldest_age'] > (now - age_tolerance):
               print "\n\t**** ALERT: NEW AIRCRAFT: ",key
           else:
-              print "\n\t     New, but already-alerted on: ",key
+              print "\t     Already-alerted on: ",key
       else:
           # We've seen this aircraft before. Don't alert on it
           print "\n\t      Re-sighting of: ",key
