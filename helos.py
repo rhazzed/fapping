@@ -15,283 +15,318 @@ import time
 import subprocess as sp
 import signal
 import datetime
+import subprocess
 
 
-##   DATADIR ="/run/dump1090-fa"
-##   CURRDATA ="${DATADIR}/aircraft.json"
-
-
-# (Approx.) Miles-per-degree of latitude/longitude - accuracy is
-# not as important; only being used for rough estimation for visual
-# graphing purposes.
-mpd_lat = 69.0535	# Avg, equator-to-pole
-mpd_lon = 53.0000	# At 40 degrees N/S
-
-# How old (in seconds) a reading can be before we consider
-# it no longer valid for our purposes
-#
-# DEFAULT TO 30 MINUTES?
-MAX_AGE = (30.0*60.0)	# 30 mins - use for Production
-#MAX_AGE = (24.0*60.0*60.0)	# Use for testing
-
-# Alert window - Max. age for an alert to be generated
-# NOTE: MUST be more than recheck_interval
-alert_window = (90)  # 90 seconds
-
-# Re-check interval (in seconds) -  how long to sleep between checks for new aircraft
-# NOTE: MUST be less than alert_window
-recheck_interval = (1*60) # 1 minute
-
-# Date that file was created
-file_date = 0;
-
-# Set to 1 if we should continuously refresh the display
-continuous = 1
-
-
-# How many time to re-home (vs redraw) the screen before
-# clearing it out completely (don't clear every time, as
-# it makes the screen "blink", which is annoying...)
-LOOPS_BEFORE_CLS=6
 
 # If a signal causes us to terminate, exit gracefully
 def Exit_gracefully(signal, frame):
     sys.exit(0)
 
-signal.signal(signal.SIGINT, Exit_gracefully)
 
 
-signal.signal(signal.SIGINT, Exit_gracefully)
+if __name__ == "__main__":
 
+  email_list = []
 
+  print "Arguments count: ", len(sys.argv)
+  for i, arg in enumerate(sys.argv):
+      print "Argument ",i," : ",arg
+      if i >= 1:
+          email_list.append(arg)
 
-# Get position of receiver ("site")
-site_file = '/run/dump1090-fa/receiver.json'
-site_data=open(site_file)
-site = json.load(site_data)
-#pprint(site)
-site_data.close()
+  print "EMAIL LIST: ",email_list
 
-#print ""
-
-# If we don't know where receiver is, we can't continue, so - exit.
-if 'lat' in site and 'lon' in site:
-    site_lat = site['lat']
-    #print "Site Latitude: ", site_lat
-    site_lon = site['lon']
-    #print "Site Longitude: ", site_lon
-else:
-    print "\nERROR: Site's position is unknown.  Can not continue.\n"
-    raise SystemExit
-
-
-
-
-met_criteria=0
-total_aircraft=0
-while met_criteria == 0:
-
-  now = time.time()
-  print "\nTIME_NOW: ", now
-  print "TIME_NOW: ",datetime.datetime.utcfromtimestamp(now)
-
-  max_age = now - MAX_AGE 
-  #print "\nMAX_AGE:  ", max_age
-  print "\nMAX_AGE:  ", max_age
-  print "MAX_AGE:  ", datetime.datetime.utcfromtimestamp(max_age)
-
-  # Dictionary of all helicopter data
-  helo_dict = {}
-
-  # The most recent aircraft signal-report file -
-  #aircraft_files = [ '/run/dump1090-fa/aircraft.json' ]
-  aircraft_files = glob.glob('/run/dump1090-fa/history*.json')
-  aircraft_files.append('/run/dump1090-fa/aircraft.json')
-
-
-  for aircraft_file in aircraft_files:
-
-    # If we are looping in "continuous" mode, clear out the grid
-    # BUG BUG BUG:
-    # BUG BUG BUG: The logic below fails if we ever want to repeatedly generate
-    #              this plot *AND* are using multiple files to do so. MUST change
-    #              this logic if ever we want to BOTH repeatedly generate the
-    #              plot *AND* we are using multiple files to do so.
-    # BUG BUG BUG:
-
-    aircraft_data=open(aircraft_file)
-    data = json.load(aircraft_data)
-    #pprint(data)
-    aircraft_data.close()
-
-    # Pickup file-creation date
-    file_date = data['now']
-    #print "\nFile-creation date: ", file_date
-
-
-    # Figure out how many aircraft are in this file
-    num_found = len(data['aircraft'])
-
-    #print "\nNumber of Aircraft found: ", num_found
-
-    # Add aircraft from this file to total-found
-    total_aircraft += num_found
-
-    features = [ 'hex', 'flight', 'lat', 'lon', 'alt_baro' ]
-    for i in range(0, num_found):
-        if 'rssi' in data['aircraft'][i] \
+  # Pickup whom to email alerts to from the command line
+  # FOR NOW: Only allow 1 email address
+  # TO-DO: Expand to include multiple destinations
+  
+  
+  
+  ##   DATADIR ="/run/dump1090-fa"
+  ##   CURRDATA ="${DATADIR}/aircraft.json"
+  
+  
+  # (Approx.) Miles-per-degree of latitude/longitude - accuracy is
+  # not as important; only being used for rough estimation for visual
+  # graphing purposes.
+  mpd_lat = 69.0535	# Avg, equator-to-pole
+  mpd_lon = 53.0000	# At 40 degrees N/S
+  
+  # How old (in seconds) a reading can be before we consider
+  # it no longer valid for our purposes
+  #
+  # DEFAULT TO 30 MINUTES?
+  MAX_AGE = (30.0*60.0)	# 30 mins - use for Production
+  #MAX_AGE = (24.0*60.0*60.0)	# Use for testing
+  
+  # Alert window - Max. age for an alert to be generated
+  # NOTE: MUST be more than recheck_interval
+  alert_window = (90)  # 90 seconds - use for Production
+  #alert_window = MAX_AGE # Use for testing
+  
+  # Re-check interval (in seconds) -  how long to sleep between checks for new aircraft
+  # NOTE: MUST be less than alert_window
+  recheck_interval = (1*60) # 1 minute
+  
+  # Date that file was created
+  file_date = 0;
+  
+  # Set to 1 if we should continuously refresh the display
+  continuous = 1
+  
+  
+  # How many time to re-home (vs redraw) the screen before
+  # clearing it out completely (don't clear every time, as
+  # it makes the screen "blink", which is annoying...)
+  LOOPS_BEFORE_CLS=6
+  
+  signal.signal(signal.SIGINT, Exit_gracefully)
+  
+  
+  signal.signal(signal.SIGINT, Exit_gracefully)
+  
+  
+  
+  # Get position of receiver ("site")
+  site_file = '/run/dump1090-fa/receiver.json'
+  site_data=open(site_file)
+  site = json.load(site_data)
+  #pprint(site)
+  site_data.close()
+  
+  #print ""
+  
+  # If we don't know where receiver is, we can't continue, so - exit.
+  if 'lat' in site and 'lon' in site:
+      site_lat = site['lat']
+      #print "Site Latitude: ", site_lat
+      site_lon = site['lon']
+      #print "Site Longitude: ", site_lon
+  else:
+      print "\nERROR: Site's position is unknown.  Can not continue.\n"
+      raise SystemExit
+  
+  
+  
+  
+  met_criteria=0
+  total_aircraft=0
+  while met_criteria == 0:
+  
+    now = time.time()
+    print "\nTIME_NOW: ", now
+    print "TIME_NOW: ",datetime.datetime.utcfromtimestamp(now)
+  
+    max_age = now - MAX_AGE 
+    #print "\nMAX_AGE:  ", max_age
+    print "\nMAX_AGE:  ", max_age
+    print "MAX_AGE:  ", datetime.datetime.utcfromtimestamp(max_age)
+  
+    # Dictionary of all helicopter data
+    helo_dict = {}
+  
+    # The most recent aircraft signal-report file -
+    #aircraft_files = [ '/run/dump1090-fa/aircraft.json' ]
+    aircraft_files = glob.glob('/run/dump1090-fa/history*.json')
+    aircraft_files.append('/run/dump1090-fa/aircraft.json')
+  
+  
+    for aircraft_file in aircraft_files:
+  
+      # If we are looping in "continuous" mode, clear out the grid
+      # BUG BUG BUG:
+      # BUG BUG BUG: The logic below fails if we ever want to repeatedly generate
+      #              this plot *AND* are using multiple files to do so. MUST change
+      #              this logic if ever we want to BOTH repeatedly generate the
+      #              plot *AND* we are using multiple files to do so.
+      # BUG BUG BUG:
+  
+      aircraft_data=open(aircraft_file)
+      data = json.load(aircraft_data)
+      #pprint(data)
+      aircraft_data.close()
+  
+      # Pickup file-creation date
+      file_date = data['now']
+      #print "\nFile-creation date: ", file_date
+  
+  
+      # Figure out how many aircraft are in this file
+      num_found = len(data['aircraft'])
+  
+      #print "\nNumber of Aircraft found: ", num_found
+  
+      # Add aircraft from this file to total-found
+      total_aircraft += num_found
+  
+      features = [ 'hex', 'flight', 'lat', 'lon', 'alt_baro' ]
+      for i in range(0, num_found):
+          if 'rssi' in data['aircraft'][i] \
 and data['aircraft'][i]['rssi'] > -49.5 \
 and 'seen' in data['aircraft'][i] \
 and 'category' in data['aircraft'][i] and data['aircraft'][i]['category'] == "A7":
-
-            seen = file_date - data['aircraft'][i]['seen']
-            #print "\nseen : ", seen,
-            #age = now - seen
-            age = seen
-            #print "\nage of siting: ", age,
-            hex = data['aircraft'][i]['hex']
-
-            if (age >= max_age) :
-
-                # Create default position
-                pos = {
-                    'age': -9999999999,
-                    'lat': 0,
-                    'lon': 0,
-                    'alt': 0
-                }
-
-                # Create default aircraft info
-                aircraft = {
-                    'hex': hex,
-                    'oldest_age': 9999999999,
-                    'newest_pos': pos,
-                    'newest_age': -9999999999
-                }
-
-                # If hex is NOT in helo_dict
-                if hex not in helo_dict.keys(): 
-                    print "\n\nHex: ",hex, " Not present - adding it now...",
-                    # Add default info to helo_dict
-                    helo_dict[hex] = aircraft
-                else: 
-                    print "\n\nHex: ",hex, " already present",
-
-                print "\n", age,
-                met_criteria += 1
-                for feature in features:
-	            if feature in data['aircraft'][i]:
-	                print " ", feature, ": ", data['aircraft'][i][feature],
-	            else:
-	                print " ", feature, ": ", " unk ",
-
-                print "\nFound age of: ", datetime.datetime.utcfromtimestamp(age)
-                try:
-                    print "  was newest: ", datetime.datetime.utcfromtimestamp(helo_dict[hex]['newest_age'])
-                except:
-                    print "unk"
-
-                try:
-                    print " was pos age: ", datetime.datetime.utcfromtimestamp(helo_dict[hex]['newest_pos']['age'])
-                except:
-                    print "unk"
-
-                try:
-                   print "  was oldest: ", datetime.datetime.utcfromtimestamp(helo_dict[hex]['oldest_age'])
-                except:
-                    print "unk"
-
-                # Keep oldest age for hex
-                if age < helo_dict[hex]['oldest_age']:
-                    print "\nFound older age of: ",age
-                    print "Found older age of: ", datetime.datetime.utcfromtimestamp(age)
-                    helo_dict[hex].update({'oldest_age': age})
-
-
-                # Keep newest lat/long/alt for hex
-                if 'lat' in data['aircraft'][i] \
+  
+              seen = file_date - data['aircraft'][i]['seen']
+              #print "\nseen : ", seen,
+              #age = now - seen
+              age = seen
+              #print "\nage of siting: ", age,
+              hex = data['aircraft'][i]['hex']
+  
+              if (age >= max_age) :
+  
+                  # Create default position
+                  pos = {
+                      'age': -9999999999,
+                      'lat': 0,
+                      'lon': 0,
+                      'alt': 0
+                  }
+  
+                  # Create default aircraft info
+                  aircraft = {
+                      'hex': hex,
+                      'oldest_age': 9999999999,
+                      'newest_pos': pos,
+                      'newest_age': -9999999999
+                  }
+  
+                  # If hex is NOT in helo_dict
+                  if hex not in helo_dict.keys(): 
+                      print "\n\nHex: ",hex, " Not present - adding it now...",
+                      # Add default info to helo_dict
+                      helo_dict[hex] = aircraft
+                  else: 
+                      print "\n\nHex: ",hex, " already present",
+  
+                  print "\n", age,
+                  met_criteria += 1
+                  for feature in features:
+  	            if feature in data['aircraft'][i]:
+  	                print " ", feature, ": ", data['aircraft'][i][feature],
+  	            else:
+  	                print " ", feature, ": ", " unk ",
+  
+                  print "\nFound age of: ", datetime.datetime.utcfromtimestamp(age)
+                  try:
+                      print "  was newest: ", datetime.datetime.utcfromtimestamp(helo_dict[hex]['newest_age'])
+                  except:
+                      print "unk"
+  
+                  try:
+                      print " was pos age: ", datetime.datetime.utcfromtimestamp(helo_dict[hex]['newest_pos']['age'])
+                  except:
+                      print "unk"
+  
+                  try:
+                     print "  was oldest: ", datetime.datetime.utcfromtimestamp(helo_dict[hex]['oldest_age'])
+                  except:
+                      print "unk"
+  
+                  # Keep oldest age for hex
+                  if age < helo_dict[hex]['oldest_age']:
+                      print "\nFound older age of: ",age
+                      print "Found older age of: ", datetime.datetime.utcfromtimestamp(age)
+                      helo_dict[hex].update({'oldest_age': age})
+  
+  
+                  # Keep newest lat/long/alt for hex
+                  if 'lat' in data['aircraft'][i] \
 and 'lon' in data['aircraft'][i] \
 and 'alt_baro' in data['aircraft'][i] \
 and age > helo_dict[hex]['newest_pos']['age']:
-
-                    print "\nFound newer position with age of: ",age
-                    print "Found newer position with age of: ", datetime.datetime.utcfromtimestamp(age)
-                    helo_dict[hex]['newest_pos'].update({
-                        'age': age,
-                        'lat': data['aircraft'][i]['lat'],
-                        'lon': data['aircraft'][i]['lon'],
-                        'alt': data['aircraft'][i]['alt_baro']
-                    })
-
-
-                # keep newest age for hex
-                if age > helo_dict[hex]['newest_age']:
-                    print "\nFound newer age of: ",age
-                    print "Found newer age of: ", datetime.datetime.utcfromtimestamp(age)
-                    helo_dict[hex].update({'newest_age': age})
-
-
-
-            # End, sighting is recent enough to be considered
-
-    # End, processing of this one file is complete
-
-  # End, processing of all aircraft files are complete
-
-  # Done looking through all aircraft for candidates
-
-  print "\n"
-  pprint(helo_dict)
-
-  # Look through helo_dict
-  # For each entry in helo_dict
-  for key in helo_dict.keys():
-
-      print "\n\tHex: ",key
-      print "\tOldest: ",datetime.datetime.utcfromtimestamp(helo_dict[key]['oldest_age'])
-      print "\tNewest: ",datetime.datetime.utcfromtimestamp(helo_dict[key]['newest_age'])
-
-      # If newest_age is "recent enough"...
-      if helo_dict[key]['newest_age'] > (now - alert_window):
-          # This sighting is new. See if it's been alerted on before
-
-          if helo_dict[key]['oldest_age'] > (now - alert_window):
-              print "\n\t**** ALERT: NEW AIRCRAFT: ",key
-          else:
-              print "\t     Already alerted on: ",key
-      else:
-          # We've seen this aircraft before. Don't alert on it
-          print "\t     Old sighting of: ",key
-
-          '''
-{u'a8aa7e': {'hex': u'a8aa7e',
-             'newest_age': 2099.9381449222565,
-             'newest_pos': {'age': 2099.9381449222565,
-                            'alt': u'ground',
-                            'lat': 34.587994,
-                            'lon': -117.375309},
-             'oldest_age': 2947.838145017624}}
-          '''
-
-
-  print '\n%s GMT     Aircraft: %d/%d      ' % (time.asctime(time.gmtime()), met_criteria,total_aircraft)
-
-
-  print ""
-
-  if continuous == 1:
-    met_criteria=0
-    total_aircraft=0
-    sys.stdout.flush()
-    time.sleep(recheck_interval)
-    print "\n\n\n*******************************************************\n\n"
-
-  else:
-    quit()
-
-
-raise SystemExit
-
+  
+                      print "\nFound newer position with age of: ",age
+                      print "Found newer position with age of: ", datetime.datetime.utcfromtimestamp(age)
+                      helo_dict[hex]['newest_pos'].update({
+                          'age': age,
+                          'lat': data['aircraft'][i]['lat'],
+                          'lon': data['aircraft'][i]['lon'],
+                          'alt': data['aircraft'][i]['alt_baro']
+                      })
+  
+  
+                  # keep newest age for hex
+                  if age > helo_dict[hex]['newest_age']:
+                      print "\nFound newer age of: ",age
+                      print "Found newer age of: ", datetime.datetime.utcfromtimestamp(age)
+                      helo_dict[hex].update({'newest_age': age})
+  
+  
+  
+              # End, sighting is recent enough to be considered
+  
+      # End, processing of this one file is complete
+  
+    # End, processing of all aircraft files are complete
+  
+    # Done looking through all aircraft for candidates
+  
+    print "\n"
+    pprint(helo_dict)
+  
+    # Look through helo_dict
+    # For each entry in helo_dict
+    for key in helo_dict.keys():
+  
+        print "\n\tHex: ",key
+        print "\tOldest: ",datetime.datetime.utcfromtimestamp(helo_dict[key]['oldest_age'])
+        print "\tNewest: ",datetime.datetime.utcfromtimestamp(helo_dict[key]['newest_age'])
+  
+        # If newest_age is "recent enough"...
+        if helo_dict[key]['newest_age'] > (now - alert_window):
+            # This sighting is new. See if it's been alerted on before
+  
+            if helo_dict[key]['oldest_age'] > (now - alert_window):
+  
+                print "\n\t**** ALERT: NEW AIRCRAFT: ",key
+  
+                # Make call to send text/email
+                '''
+                    smtp_python2.py <email_addr> "Aircraft Alert!"
+                '''
+                for email_addr in email_list:
+                    cmd = './smtp_python2.py ' + email_addr + ' "Aircraft hex: ' + key + ' alert from PiAware"'
+                    print "DEBUG: cmd["+cmd+"]"
+                    returned_value = subprocess.call(cmd, shell=True)  # returns the exit code in unix
+                    print "\t\t** SYSTEM CALL RETURNED CODE: ", returned_value
+                    print "\n"
+  
+            else:
+                print "\t     Already alerted on: ",key
+        else:
+            # We've seen this aircraft before. Don't alert on it
+            print "\t     Old sighting of: ",key
+  
+            '''
+               {u'a8aa7e': {'hex': u'a8aa7e',
+                            'newest_age': 2099.9381449222565,
+                            'newest_pos': {'age': 2099.9381449222565,
+                                           'alt': u'ground',
+                                           'lat': 34.587994,
+                                           'lon': -117.375309},
+                            'oldest_age': 2947.838145017624}}
+            '''
+  
+  
+    print '\n%s GMT     Aircraft: %d/%d      ' % (time.asctime(time.gmtime()), met_criteria,total_aircraft)
+  
+  
+    print ""
+  
+    if continuous == 1:
+      met_criteria=0
+      total_aircraft=0
+      sys.stdout.flush()
+      time.sleep(recheck_interval)
+      print "\n\n\n*******************************************************\n\n"
+  
+    else:
+      quit()
+  
+  
+  raise SystemExit
 
 #
 # aircraft.json is MAIN (current) FILE
