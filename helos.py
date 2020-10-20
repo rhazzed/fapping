@@ -29,22 +29,21 @@ mpd_lon = 53.0000	# At 40 degrees N/S
 # How old (in seconds) a reading can be before we consider
 # it no longer valid for our purposes
 #
-# DEFAULT TO 10 MINUTES?
-max_age = (10*60.0)
+# DEFAULT TO 30 MINUTES?
+max_age = (30.0*60.0)	# 30 mins - use for Production
+max_age = (2700)	# Use for testing
 
 # Date that file was created
 file_date = 0;
 
 # Set to 1 if we should continuously refresh the display
-continuous = 0
+continuous = 1
 
 
 # How many time to re-home (vs redraw) the screen before
 # clearing it out completely (don't clear every time, as
 # it makes the screen "blink", which is annoying...)
 LOOPS_BEFORE_CLS=6
-
-lcount=LOOPS_BEFORE_CLS
 
 # If a signal causes us to terminate, exit gracefully
 def Exit_gracefully(signal, frame):
@@ -54,7 +53,6 @@ signal.signal(signal.SIGINT, Exit_gracefully)
 
 
 signal.signal(signal.SIGINT, Exit_gracefully)
-
 
 
 # The most recent aircraft signal-report file -
@@ -85,11 +83,18 @@ else:
 
 
 now = time.time()
-#print "\nTIME_NOW: ", now
+print "\nTIME_NOW: ", now
+
+print "\nMAX_AGE:  ", max_age, "\n"
+
 
 met_criteria=0
 total_aircraft=0
 while met_criteria == 0:
+
+  # Dictionary of all helicopter data
+  helo_dict = {}
+
   for aircraft_file in aircraft_files:
 
     # If we are looping in "continuous" mode, clear out the grid
@@ -113,7 +118,7 @@ while met_criteria == 0:
     # Figure out how many aircraft are in this file
     num_found = len(data['aircraft'])
 
-    #print "\nNumber of Aircraft parsed: ", num_found
+    #print "\nNumber of Aircraft found: ", num_found
 
     # Add aircraft from this file to total-found
     total_aircraft += num_found
@@ -128,25 +133,105 @@ and data['aircraft'][i]['category'] == "A7":
 
             seen = file_date - data['aircraft'][i]['seen']
             age = now - seen
-            print "\n", age,
+            #print "\nage of siting: ", age,
+            hex = data['aircraft'][i]['hex']
+
+            if (age <= max_age) :
+
+                # Create default position
+                pos = {
+                    'age': 99999999,
+                    'lat': 0,
+                    'lon': 0,
+                    'alt': 0
+                }
+
+                # Create default aircraft info
+                aircraft = {
+                    'hex': hex,
+                    'oldest_age': 0,
+                    'newest_pos': pos,
+                    'newest_age': 99999999
+                }
+
+                # If hex is NOT in helo_dict
+                if hex not in helo_dict.keys(): 
+                    print "\n\nHelo ",hex, " Not present - adding it now...",
+                    # Add default info to helo_dict
+                    helo_dict[hex] = aircraft
+                else: 
+                    print "\n\nHelo ",hex, " already present",
+
+                print "\n", age,
+                met_criteria += 1
+                for feature in features:
+	            if feature in data['aircraft'][i]:
+	                print " ", feature, ": ", data['aircraft'][i][feature],
+	            else:
+	                print " ", feature, ": ", " unk ",
 
 
-            #print "\nAircraft[", i, "] - ",
-            met_criteria += 1
-            for feature in features:
-	        if feature in data['aircraft'][i]:
-	            print " ", feature, ": ", data['aircraft'][i][feature],
-	        else:
-	            print " ", feature, ": ", " unk ",
+                # Keep oldest age for hex
+                if helo_dict[hex]['oldest_age'] < age:
+                    print "\nFound older age of: ",age
+                    helo_dict[hex].update({'oldest_age': age})
+
+
+                # Keep newest lat/long/alt for hex
+                if 'lat' in data['aircraft'][i] \
+and 'lon' in data['aircraft'][i] \
+and 'alt_baro' in data['aircraft'][i] \
+and helo_dict[hex]['newest_pos']['age'] > age:
+
+                    print "\nFound newer position with age of: ",age
+                    helo_dict[hex]['newest_pos'].update({
+                        'age': age,
+                        'lat': data['aircraft'][i]['lat'],
+                        'lon': data['aircraft'][i]['lon'],
+                        'alt': data['aircraft'][i]['alt_baro']
+                    })
+
+
+                # keep newest age for hex
+                if helo_dict[hex]['newest_age'] > age:
+                    print "\nFound newer age of: ",age
+                    helo_dict[hex].update({'newest_age': age})
+
+
+
+            # End, sighting is recent enough to be considered
 
     # End, processing of this one file is complete
 
   # End, processing of all aircraft files are complete
 
-
   # Done looking through all aircraft for candidates
 
-  #print '\n%s GMT     Aircraft: %d/%d      ' % (time.asctime(time.gmtime()), met_criteria,total_aircraft)
+  pprint(helo_dict)
+
+  # Look through helo_dict
+  # For each entry in helo_dict
+  for key in helo_dict.keys():
+      # If newest_age > oldest_age:
+      if helo_dict[key]['newest_age'] > (helo_dict[key]['oldest_age'] - (5*60)):
+          # This sighting is new. ALERT ON IT!
+          print "\n\t**** ALERT: NEW HELO: ",key
+      else:
+          # We've seen this aircraft before. Don't alert on it
+          print "\n\t      Re-sighting of: ",key
+
+          '''
+{u'a8aa7e': {'hex': u'a8aa7e',
+             'newest_age': 2099.9381449222565,
+             'newest_pos': {'age': 2099.9381449222565,
+                            'alt': u'ground',
+                            'lat': 34.587994,
+                            'lon': -117.375309},
+             'oldest_age': 2947.838145017624}}
+          '''
+
+
+  print '\n%s GMT     Aircraft: %d/%d      ' % (time.asctime(time.gmtime()), met_criteria,total_aircraft)
 
 
   print ""
@@ -155,13 +240,7 @@ and data['aircraft'][i]['category'] == "A7":
     met_criteria=0
     total_aircraft=0
     sys.stdout.flush()
-    time.sleep(4)
-    lcount = lcount -1
-    if lcount <= 1:
-        sp.call('tput clear',shell=True)
-        lcount=LOOPS_BEFORE_CLS
-    else:
-        sp.call('tput home',shell=True)
+    time.sleep(10)
 
   else:
     quit()
@@ -171,19 +250,17 @@ raise SystemExit
 
 
 #
+# aircraft.json is MAIN (current) FILE
+#
 # HISTORICAL FILES -
 #
 #  1) Stored in $DATADIR/history_[0-99999].json
-#  2) Lower number earlier in time
 #  3) Seem to be created in 30-second intervals
-#  4) If "3" is true, 10 minutes would constitute the current (aircraft.json) and previous 19 "history_xxx.json" files
-#  5) The first line of each file has a seconds-since-epoch (UTC) in the JSON attribute "now", with one digit of decimal precision
-#  6) Attribute "category" of "A7" is known to be a helicopter
-#  7) Others in category "A1" have been helicopters, but can't tell how FlightAware knows this - perhaps by tail number/registration database
+#  4) The first line of each file has a seconds-since-epoch (UTC) in the JSON attribute "now", with one digit of decimal precision
+#  5) Attribute "category" of "A7" is known to be a helicopter
+#  6) Others in category "A1" have been helicopters, but can't tell how FlightAware knows this - perhaps by tail number/registration database
 #
-#
-#
-# EXAMPLE FILE -
+# EXAMPLE aircraft.json FILE -
 #
 #  { "now" : 1602919584.1,
 #    "messages" : 337172772,
@@ -197,31 +274,66 @@ raise SystemExit
 
 
 
-#  File-creation date:  1603134762.1
-#  
-#  Number of Aircraft parsed:  140
-#  
-#  Aircraft[ 38 ] -
-#     hex :  ab6c7f
-#     flight :  N835SB
-#     seen :  0.4
-#     lat :  34.498077
-#     lon :  -117.397324
-#     alt_baro :  3550
-#     category :  A7
-#
-#
-#  File-creation date:  1603134801.5
-#
-#  Number of Aircraft parsed:  136
-#
-#  Aircraft[ 42 ] -
-#     hex :  ab6c7f
-#     flight :  N835SB
-#     seen :  0.1
-#     lat :  34.518814
-#     lon :  -117.396988
-#     alt_baro :  3525
-#     category :  A7
-#
+
+'''
+
+EXAMPLE OUTPUT (so far) -
+
+2533.80363703   hex :  a8aa7e   flight :  N658AM     lat :  34.543304   lon :  -117.264535   alt_baro :  2700
+2533.80363703   hex :  a8aa7e   flight :  N658AM     lat :  34.543304   lon :  -117.264535   alt_baro :  2700
+2533.80363679   hex :  a8aa7e   flight :   unk    lat :   unk    lon :   unk    alt_baro :   unk
+2533.80363679   hex :  a8aa7e   flight :   unk    lat :   unk    lon :   unk    alt_baro :   unk
+2533.80363679   hex :  a8aa7e   flight :   unk    lat :   unk    lon :   unk    alt_baro :   unk
+2533.80363679   hex :  a8aa7e   flight :   unk    lat :   unk    lon :   unk    alt_baro :   unk
+2533.70363688   hex :  a8aa7e   flight :   unk    lat :   unk    lon :   unk    alt_baro :   unk
+1014.00363684   hex :  a0ca3b   flight :  N150AM     lat :  34.166922   lon :  -117.045422   alt_baro :  7500
+983.903636932   hex :  a0ca3b   flight :  N150AM     lat :  34.175534   lon :  -117.031059   alt_baro :  7600
+954.10363698   hex :  a0ca3b   flight :  N150AM     lat :  34.185883   lon :  -117.015381   alt_baro :  8000
+923.803637028   hex :  a0ca3b   flight :  N150AM     lat :  34.195816   lon :  -116.999686   alt_baro :  8200
+893.903636932   hex :  a0ca3b   flight :  N150AM     lat :  34.206161   lon :  -116.985   alt_baro :  8500
+874.503637075   hex :  a0ca3b   flight :  N150AM     lat :  34.212891   lon :  -116.975415   alt_baro :  8600
+841.903636932   hex :  a0ca3b   flight :  N150AM     lat :  34.221268   lon :  -116.958992   alt_baro :  8500
+804.403636932   hex :  a0ca3b   flight :  N150AM     lat :  34.233398   lon :  -116.930573   alt_baro :  7900
+780.403636932   hex :  a0ca3b   flight :   unk    lat :  34.242057   lon :  -116.913757   alt_baro :  7600
+756.703637123   hex :  a0ca3b   flight :   unk    lat :   unk    lon :   unk    alt_baro :   unk
+756.703637123   hex :  a0ca3b   flight :   unk    lat :   unk    lon :   unk    alt_baro :   unk
+756.703636885   hex :  a0ca3b   flight :   unk    lat :   unk    lon :   unk    alt_baro :   unk
+756.703636885   hex :  a0ca3b   flight :   unk    lat :   unk    lon :   unk    alt_baro :   unk
+756.703636885   hex :  a0ca3b   flight :   unk    lat :   unk    lon :   unk    alt_baro :   unk
+756.703636885   hex :  a0ca3b   flight :   unk    lat :   unk    lon :   unk    alt_baro :   unk
+756.703636885   hex :  a0ca3b   flight :   unk    lat :   unk    lon :   unk    alt_baro :   unk
+756.703636885   hex :  a0ca3b   flight :   unk    lat :  34.242057   lon :  -116.913757   alt_baro :  7600
+756.703636885   hex :  a0ca3b   flight :   unk    lat :  34.242057   lon :  -116.913757   alt_baro :  7600
+756.603636742   hex :  a0ca3b   flight :   unk    lat :   unk    lon :   unk    alt_baro :   unk
+533.60363698   hex :  a8aa7e   flight :  N658AM     lat :  34.538222   lon :  -117.265778   alt_baro :  3100
+503.503637075   hex :  a8aa7e   flight :  N658AM     lat :  34.527145   lon :  -117.26958   alt_baro :  3600
+473.503637075   hex :  a8aa7e   flight :  N658AM     lat :  34.513367   lon :  -117.272046   alt_baro :  4100
+443.403636932   hex :  a8aa7e   flight :  N658AM     lat :  34.498077   lon :  -117.271486   alt_baro :  4600
+413.303636789   hex :  a8aa7e   flight :  N658AM     lat :  34.48222   lon :  -117.271786   alt_baro :  5100
+383.403636932   hex :  a8aa7e   flight :  N658AM     lat :  34.46553   lon :  -117.271542   alt_baro :  5600
+353.303637028   hex :  a8aa7e   flight :  N658AM     lat :  34.448796   lon :  -117.271156   alt_baro :  6100
+323.203636885   hex :  a8aa7e   flight :  N658AM     lat :  34.428964   lon :  -117.27047   alt_baro :  6100
+293.303637028   hex :  a8aa7e   flight :  N658AM     lat :  34.408621   lon :  -117.270184   alt_baro :  6100
+263.203636885   hex :  a8aa7e   flight :  N658AM     lat :  34.387998   lon :  -117.269955   alt_baro :  6100
+233.103636742   hex :  a8aa7e   flight :  N658AM     lat :  34.367432   lon :  -117.269804   alt_baro :  6100
+203.003636837   hex :  a8aa7e   flight :  N658AM     lat :  34.347079   lon :  -117.269039   alt_baro :  6100
+173.003636837   hex :  a8aa7e   flight :  N658AM     lat :  34.326508   lon :  -117.268907   alt_baro :  6100
+143.003636837   hex :  a8aa7e   flight :  N658AM     lat :  34.305862   lon :  -117.268571   alt_baro :  6200
+112.903636932   hex :  a8aa7e   flight :  N658AM     lat :  34.284978   lon :  -117.268124   alt_baro :  6200
+82.8036370277   hex :  a8aa7e   flight :  N658AM     lat :  34.263983   lon :  -117.267838   alt_baro :  6200
+52.8036370277   hex :  a8aa7e   flight :  N658AM     lat :  34.243593   lon :  -117.267494   alt_baro :  6200
+23.4036369324   hex :  a8aa7e   flight :  N658AM     lat :  34.223343   lon :  -117.267036   alt_baro :  6200
+0.30363702774   hex :  a8aa7e   flight :  N658AM     lat :  34.207581   lon :  -117.266609   alt_baro :  6100
+
+
+* Filter data that is older than max_age (say, 30 minutes)
+* Use hex as key to create a per-aircraft table
+* Keep the most recent "valid" lat/long/alt data in per-aircraft table (using hex as key)
+* Keep all heard-timestamps in per-aircraft table (using hex as key)
+
+Keep oldest age for hex
+Keep newest lat/long/alt for hex
+keep newest age for hex
+
+'''
 
