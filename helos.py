@@ -31,7 +31,13 @@ mpd_lon = 53.0000	# At 40 degrees N/S
 #
 # DEFAULT TO 30 MINUTES?
 max_age = (30.0*60.0)	# 30 mins - use for Production
-max_age = (2700)	# Use for testing
+#max_age = (24.0*60.0*60.0)	# Use for testing
+
+# Age tolerance for alerting - Consider all alerts within this period to be "the same"
+age_tolerance = (5*60)  # 5 minutes either way
+
+# Re-check interval (in seconds)
+recheck_interval = (60)
 
 # Date that file was created
 file_date = 0;
@@ -85,7 +91,8 @@ else:
 now = time.time()
 print "\nTIME_NOW: ", now
 
-print "\nMAX_AGE:  ", max_age, "\n"
+max_age = now - max_age 
+#print "\nMAX_AGE:  ", max_age, "\n"
 
 
 met_criteria=0
@@ -132,15 +139,17 @@ and 'category' in data['aircraft'][i] \
 and data['aircraft'][i]['category'] == "A7":
 
             seen = file_date - data['aircraft'][i]['seen']
-            age = now - seen
-            #print "\nage of siting: ", age,
+            print "\nseen : ", seen,
+            #age = now - seen
+            age = seen
+            print "\nage of siting: ", age,
             hex = data['aircraft'][i]['hex']
 
-            if (age <= max_age) :
+            if (age >= max_age) :
 
                 # Create default position
                 pos = {
-                    'age': 99999999,
+                    'age': -9999999999,
                     'lat': 0,
                     'lon': 0,
                     'alt': 0
@@ -149,9 +158,9 @@ and data['aircraft'][i]['category'] == "A7":
                 # Create default aircraft info
                 aircraft = {
                     'hex': hex,
-                    'oldest_age': 0,
+                    'oldest_age': 9999999999,
                     'newest_pos': pos,
-                    'newest_age': 99999999
+                    'newest_age': -9999999999
                 }
 
                 # If hex is NOT in helo_dict
@@ -172,7 +181,7 @@ and data['aircraft'][i]['category'] == "A7":
 
 
                 # Keep oldest age for hex
-                if helo_dict[hex]['oldest_age'] < age:
+                if age < helo_dict[hex]['oldest_age']:
                     print "\nFound older age of: ",age
                     helo_dict[hex].update({'oldest_age': age})
 
@@ -181,7 +190,7 @@ and data['aircraft'][i]['category'] == "A7":
                 if 'lat' in data['aircraft'][i] \
 and 'lon' in data['aircraft'][i] \
 and 'alt_baro' in data['aircraft'][i] \
-and helo_dict[hex]['newest_pos']['age'] > age:
+and age > helo_dict[hex]['newest_pos']['age']:
 
                     print "\nFound newer position with age of: ",age
                     helo_dict[hex]['newest_pos'].update({
@@ -193,7 +202,7 @@ and helo_dict[hex]['newest_pos']['age'] > age:
 
 
                 # keep newest age for hex
-                if helo_dict[hex]['newest_age'] > age:
+                if age > helo_dict[hex]['newest_age']:
                     print "\nFound newer age of: ",age
                     helo_dict[hex].update({'newest_age': age})
 
@@ -213,7 +222,7 @@ and helo_dict[hex]['newest_pos']['age'] > age:
   # For each entry in helo_dict
   for key in helo_dict.keys():
       # If newest_age > oldest_age:
-      if helo_dict[key]['newest_age'] > (helo_dict[key]['oldest_age'] - (5*60)):
+      if helo_dict[key]['newest_age'] > (helo_dict[key]['oldest_age'] - age_tolerance):
           # This sighting is new. ALERT ON IT!
           print "\n\t**** ALERT: NEW HELO: ",key
       else:
@@ -240,7 +249,7 @@ and helo_dict[hex]['newest_pos']['age'] > age:
     met_criteria=0
     total_aircraft=0
     sys.stdout.flush()
-    time.sleep(10)
+    time.sleep(recheck_interval)
 
   else:
     quit()
@@ -336,4 +345,3 @@ Keep newest lat/long/alt for hex
 keep newest age for hex
 
 '''
-
