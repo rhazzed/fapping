@@ -14,6 +14,7 @@ import glob
 import time
 import subprocess as sp
 import signal
+import datetime
 
 
 ##   DATADIR ="/run/dump1090-fa"
@@ -90,9 +91,12 @@ else:
 
 now = time.time()
 print "\nTIME_NOW: ", now
+print "TIME_NOW: ",datetime.datetime.utcfromtimestamp(now)
 
 max_age = now - max_age 
-#print "\nMAX_AGE:  ", max_age, "\n"
+#print "\nMAX_AGE:  ", max_age
+print "\nMAX_AGE:  ", max_age
+print "MAX_AGE:  ", datetime.datetime.utcfromtimestamp(max_age)
 
 
 met_criteria=0
@@ -135,14 +139,13 @@ while met_criteria == 0:
         if 'rssi' in data['aircraft'][i] \
 and data['aircraft'][i]['rssi'] > -49.5 \
 and 'seen' in data['aircraft'][i] \
-and 'category' in data['aircraft'][i] \
-and data['aircraft'][i]['category'] == "A7":
+and 'category' in data['aircraft'][i] and data['aircraft'][i]['category'] == "A7":
 
             seen = file_date - data['aircraft'][i]['seen']
-            print "\nseen : ", seen,
+            #print "\nseen : ", seen,
             #age = now - seen
             age = seen
-            print "\nage of siting: ", age,
+            #print "\nage of siting: ", age,
             hex = data['aircraft'][i]['hex']
 
             if (age >= max_age) :
@@ -179,10 +182,26 @@ and data['aircraft'][i]['category'] == "A7":
 	            else:
 	                print " ", feature, ": ", " unk ",
 
+                print "\nFound age of: ", datetime.datetime.utcfromtimestamp(age)
+                try:
+                    print "  was newest: ", datetime.datetime.utcfromtimestamp(helo_dict[hex]['newest_age'])
+                except:
+                    print "unk"
+
+                try:
+                    print " was pos age: ", datetime.datetime.utcfromtimestamp(helo_dict[hex]['newest_pos']['age'])
+                except:
+                    print "unk"
+
+                try:
+                   print "  was oldest: ", datetime.datetime.utcfromtimestamp(helo_dict[hex]['oldest_age'])
+                except:
+                    print "unk"
 
                 # Keep oldest age for hex
                 if age < helo_dict[hex]['oldest_age']:
                     print "\nFound older age of: ",age
+                    print "Found older age of: ", datetime.datetime.utcfromtimestamp(age)
                     helo_dict[hex].update({'oldest_age': age})
 
 
@@ -193,6 +212,7 @@ and 'alt_baro' in data['aircraft'][i] \
 and age > helo_dict[hex]['newest_pos']['age']:
 
                     print "\nFound newer position with age of: ",age
+                    print "Found newer position with age of: ", datetime.datetime.utcfromtimestamp(age)
                     helo_dict[hex]['newest_pos'].update({
                         'age': age,
                         'lat': data['aircraft'][i]['lat'],
@@ -204,6 +224,7 @@ and age > helo_dict[hex]['newest_pos']['age']:
                 # keep newest age for hex
                 if age > helo_dict[hex]['newest_age']:
                     print "\nFound newer age of: ",age
+                    print "Found newer age of: ", datetime.datetime.utcfromtimestamp(age)
                     helo_dict[hex].update({'newest_age': age})
 
 
@@ -225,10 +246,15 @@ and age > helo_dict[hex]['newest_pos']['age']:
       # If newest_age > oldest_age:
       if helo_dict[key]['newest_age'] > (helo_dict[key]['oldest_age'] - age_tolerance):
           # This sighting is new. See if it's recent enough to alert on
+
+          print "\n\tOldest: ",datetime.datetime.utcfromtimestamp(helo_dict[key]['oldest_age'])
+          print "\tNewest: ",datetime.datetime.utcfromtimestamp(helo_dict[key]['newest_age'])
+
+
           if helo_dict[key]['newest_age'] > (now - age_tolerance):
-              print "\n\t**** ALERT: NEW HELO: ",key
+              print "\n\t**** ALERT: NEW AIRCRAFT: ",key
           else:
-              print "\n\t     New, but already-alerted on helo: ",key
+              print "\n\t     New, but already-alerted on: ",key
       else:
           # We've seen this aircraft before. Don't alert on it
           print "\n\t      Re-sighting of: ",key
