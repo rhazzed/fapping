@@ -34,11 +34,13 @@ mpd_lon = 53.0000	# At 40 degrees N/S
 MAX_AGE = (30.0*60.0)	# 30 mins - use for Production
 #MAX_AGE = (24.0*60.0*60.0)	# Use for testing
 
-# Age tolerance for alerting - Consider all alerts within this period to be "the same"
-age_tolerance = (5*60)  # 5 minutes either way
+# Alert window - Max. age for an alert to be generated
+# NOTE: MUST be more than recheck_interval
+alert_window = (90)  # 90 seconds
 
-# Re-check interval (in seconds)
-recheck_interval = (60)
+# Re-check interval (in seconds) -  how long to sleep between checks for new aircraft
+# NOTE: MUST be less than alert_window
+recheck_interval = (1*60) # 1 minute
 
 # Date that file was created
 file_date = 0;
@@ -169,11 +171,11 @@ and 'category' in data['aircraft'][i] and data['aircraft'][i]['category'] == "A7
 
                 # If hex is NOT in helo_dict
                 if hex not in helo_dict.keys(): 
-                    print "\n\nHelo ",hex, " Not present - adding it now...",
+                    print "\n\nHex: ",hex, " Not present - adding it now...",
                     # Add default info to helo_dict
                     helo_dict[hex] = aircraft
                 else: 
-                    print "\n\nHelo ",hex, " already present",
+                    print "\n\nHex: ",hex, " already present",
 
                 print "\n", age,
                 met_criteria += 1
@@ -250,10 +252,10 @@ and age > helo_dict[hex]['newest_pos']['age']:
       print "\tNewest: ",datetime.datetime.utcfromtimestamp(helo_dict[key]['newest_age'])
 
       # If newest_age is "recent enough"...
-      if helo_dict[key]['newest_age'] > (now - age_tolerance):
+      if helo_dict[key]['newest_age'] > (now - alert_window):
           # This sighting is new. See if it's been alerted on before
 
-          if helo_dict[key]['oldest_age'] > (now - age_tolerance):
+          if helo_dict[key]['oldest_age'] > (now - alert_window):
               print "\n\t**** ALERT: NEW AIRCRAFT: ",key
           else:
               print "\t     Already alerted on: ",key
@@ -282,6 +284,7 @@ and age > helo_dict[hex]['newest_pos']['age']:
     total_aircraft=0
     sys.stdout.flush()
     time.sleep(recheck_interval)
+    print "\n\n\n*******************************************************\n\n"
 
   else:
     quit()
