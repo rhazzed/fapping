@@ -160,12 +160,17 @@ if __name__ == "__main__":
       # Add aircraft from this file to total-found
       total_aircraft += num_found
   
+
+      #
+      # Categories can be found in /home/dump1090/public_html/markers.js
+      #
       features = [ 'hex', 'flight', 'lat', 'lon', 'alt_baro' ]
       for i in range(0, num_found):
           if 'rssi' in data['aircraft'][i] \
 and data['aircraft'][i]['rssi'] > -49.5 \
 and 'seen' in data['aircraft'][i] \
-and 'category' in data['aircraft'][i] and data['aircraft'][i]['category'] == "A7":
+and 'category' in data['aircraft'][i] \
+and data['aircraft'][i]['category'] in [ "A6", "B7", "A7", "B2" ]:
   
               seen = file_date - data['aircraft'][i]['seen']
               #print "\nseen : ", seen,
@@ -188,6 +193,7 @@ and 'category' in data['aircraft'][i] and data['aircraft'][i]['category'] == "A7
                   aircraft = {
                       'hex': hex,
                       'flight': 'unk',
+                      'category': 'unk',
                       'oldest_age': 9999999999,
                       'newest_pos': pos,
                       'newest_age': -9999999999
@@ -237,6 +243,19 @@ and 'category' in data['aircraft'][i] and data['aircraft'][i]['category'] == "A7
                      # Do nothing...
                      print "      no flight number"
                   print "      flight: ", flight
+
+                  category = helo_dict[hex]['category']
+                  print "DEBUG: category was   : ",category
+                  try:
+                     if data['aircraft'][i]['category'] != "unk":
+                        print "DEBUG: found category attribute!"
+                        category = data['aircraft'][i]['category']
+                        print "DEBUG: category now is: ",category
+                        helo_dict[hex]['category'] = category
+                  except:
+                     # Do nothing...
+                     print "      no category"
+                  print "    category: ", category
 
   
                   # Keep oldest age for hex
@@ -303,7 +322,7 @@ and age > helo_dict[hex]['newest_pos']['age']:
                 '''
                 for email_addr in email_list:
                     flight = helo_dict[key]['flight']
-                    cmd = './smtp_python2.py ' + email_addr + ' "Tail: ' + flight + ' reg: ' + key + ' spotted!"'
+                    cmd = './smtp_python2.py ' + email_addr + ' "Tail: ' + flight + ' reg: ' + key + ' category: ' + category + ' spotted!"'
                     print "DEBUG: cmd["+cmd+"]"
                     returned_value = subprocess.call(cmd, shell=True)  # returns the exit code in unix
                     print "\t\t** SYSTEM CALL RETURNED CODE: ", returned_value
