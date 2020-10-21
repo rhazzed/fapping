@@ -164,7 +164,8 @@ if __name__ == "__main__":
   
 
       '''
-        Categories found in /home/dump1090/public_html/markers.js -
+        Categories taken from /home/dump1090/public_html/markers.js, excpet UAVs, which
+        was found somewhere else and added here by hand -
 
         "A1" : 'cessna',
         "A2" : 'jet_nonswept',
@@ -176,6 +177,7 @@ if __name__ == "__main__":
         "B1" : 'cessna',
         "B2" : 'balloon',
         "B4" : 'cessna',
+        "B6" : 'UAV',    # NOT FOUND IN SOURCE (added by hand) - THIS ONE HAS UAVs!!!!
         "B7" : 'hi_perf',
         'C0' : 'ground_unknown',
         'C1' : 'ground_emergency',
@@ -187,12 +189,21 @@ if __name__ == "__main__":
         "C7" : 'ground_unknown'
       '''
       features = [ 'hex', 'flight', 'lat', 'lon', 'alt_baro' ]
+
+      # UNCOMMENT ONLY ONE OF THESE, DEPENDING UPON WHAT YOU WANT TO ALERT ON -
+      # For Testing -
+      #alert_categories = [ "A1","A2","A3","A4","A5","A6","A7","B1","B2","B4","B6","B7" ]
+      # For Eric -
+      alert_categories = [ "A7","B2","B6","B7" ]
+      # For Mike -
+      #alert_categories = [ "A7","B2","B6","B7" ]
+
       for i in range(0, num_found):
           if 'rssi' in data['aircraft'][i] \
 and data['aircraft'][i]['rssi'] > -49.5 \
 and 'seen' in data['aircraft'][i] \
 and 'category' in data['aircraft'][i] \
-and data['aircraft'][i]['category'] in [ "A6","A7","B2","B7" ]:       #  "A1","A2","A3","A4","A5","B1","B4" ]:
+and data['aircraft'][i]['category'] in alert_categories:
   
               seen = file_date - data['aircraft'][i]['seen']
               #print "\nseen : ", seen,
@@ -339,8 +350,8 @@ and age > helo_dict[hex]['newest_pos']['age']:
         print "Timestamp on alert for ",akey,": ", datetime.datetime.utcfromtimestamp(alert_dict[akey]['age'])
 
         if alert_dict[akey]['age'] < max_age:
-            print "\nAlert for ",akey," older than: ",max_age
-            print "Alert for ",akey," older than: ", datetime.datetime.utcfromtimestamp(max_age)
+            print "\nAlert for ",akey," occurred prior to: ",max_age
+            print "Alert for ",akey," ocurred prior to: ", datetime.datetime.utcfromtimestamp(max_age)
 
             print "\nRemoving ",akey," from alert_dict"
             del alert_dict[hex]
