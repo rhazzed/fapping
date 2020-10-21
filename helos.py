@@ -173,7 +173,7 @@ if __name__ == "__main__":
         "A3" : 'airliner',
         "A4" : 'heavy_2e',
         "A5" : 'heavy_4e',
-        "A6" : 'hi_perf',            # Appears to include Lear Jets
+        "A6" : 'hi_perf',            # Appears to include Lear Jets, Bombardier
         "A7" : 'helicopter',
         "B1" : 'cessna',
         "B2" : 'balloon',
@@ -194,7 +194,7 @@ if __name__ == "__main__":
 and data['aircraft'][i]['rssi'] > -49.5 \
 and 'seen' in data['aircraft'][i] \
 and 'category' in data['aircraft'][i] \
-and data['aircraft'][i]['category'] in [ "A6", "A7", "B2" ]:       #  "B7", "A1","A2","A3","A4","A5","B1","B4" ]:
+and data['aircraft'][i]['category'] in [ "A6","A7","B2","B7" ]:       #  "A1","A2","A3","A4","A5","B1","B4" ]:
   
               seen = file_date - data['aircraft'][i]['seen']
               #print "\nseen : ", seen,
@@ -333,7 +333,7 @@ and age > helo_dict[hex]['newest_pos']['age']:
     for key in helo_dict.keys():
   
         flight = helo_dict[key]['flight']
-        category = helo_dict[hex]['category']
+        category = helo_dict[key]['category']
 
         print "\n\tHex: ",key
         print "\tOldest: ",datetime.datetime.utcfromtimestamp(helo_dict[key]['oldest_age'])
