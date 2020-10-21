@@ -161,16 +161,36 @@ if __name__ == "__main__":
       total_aircraft += num_found
   
 
-      #
-      # Categories can be found in /home/dump1090/public_html/markers.js
-      #
+      '''
+        Categories found in /home/dump1090/public_html/markers.js -
+
+        "A1" : 'cessna',
+        "A2" : 'jet_nonswept',
+        "A3" : 'airliner',
+        "A4" : 'heavy_2e',
+        "A5" : 'heavy_4e',
+        "A6" : 'hi_perf',
+        "A7" : 'helicopter',
+        "B1" : 'cessna',
+        "B2" : 'balloon',
+        "B4" : 'cessna',
+        "B7" : 'hi_perf',
+        'C0' : 'ground_unknown',
+        'C1' : 'ground_emergency',
+        'C2' : 'ground_service',
+        'C3' : 'ground_fixed',
+        "C4" : 'ground_fixed',
+        "C5" : 'ground_fixed',
+        "C6" : 'ground_unknown',
+        "C7" : 'ground_unknown'
+      '''
       features = [ 'hex', 'flight', 'lat', 'lon', 'alt_baro' ]
       for i in range(0, num_found):
           if 'rssi' in data['aircraft'][i] \
 and data['aircraft'][i]['rssi'] > -49.5 \
 and 'seen' in data['aircraft'][i] \
 and 'category' in data['aircraft'][i] \
-and data['aircraft'][i]['category'] in [ "A6", "B7", "A7", "B2" ]:
+and data['aircraft'][i]['category'] in [ "A6", "A7", "B2", "B7" ]:
   
               seen = file_date - data['aircraft'][i]['seen']
               #print "\nseen : ", seen,
