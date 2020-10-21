@@ -5,6 +5,13 @@
 # HISTORICAL INFORMATION -
 #
 #  2020-10-10  msipin  Derived from the 2020-10-09 version of fap.py
+#  2020-10-20  msipin  Added email alerts on new aircraft.
+#  2020-10-21  msipin  Added creation of "helos.txt", a list of helos currently in the air.
+#        NOTE: If you want to retrieve the list of helos that are currently in the air, you can create a symbolic
+#              link between the "helos.txt" output file from this program and the PiAware data directory.  E.G.
+#                    sudo ln -s /home/pi/Projects/fapping/helos.txt /run/dump1090-fa/
+#              Then you can retrieve this data from anywhere using this URL -
+#                    http://<PiAware_IP_Address>:8080/data/helos.txt
 ############################################
 
 import sys
@@ -29,6 +36,7 @@ if __name__ == "__main__":
 
   email_list = []
 
+  # Pickup whom to email alerts to from the command line
   print "Arguments count: ", len(sys.argv)
   for i, arg in enumerate(sys.argv):
       print "Argument ",i," : ",arg
@@ -37,9 +45,6 @@ if __name__ == "__main__":
 
   print "EMAIL LIST: ",email_list
 
-  # Pickup whom to email alerts to from the command line
-  # FOR NOW: Only allow 1 email address
-  # TO-DO: Expand to include multiple destinations
   
   
   
@@ -131,7 +136,6 @@ if __name__ == "__main__":
     aircraft_files = glob.glob('/run/dump1090-fa/history*.json')
     aircraft_files.append('/run/dump1090-fa/aircraft.json')
   
-  
     for aircraft_file in aircraft_files:
   
       # If we are looping in "continuous" mode, clear out the grid
@@ -169,7 +173,7 @@ if __name__ == "__main__":
         "A3" : 'airliner',
         "A4" : 'heavy_2e',
         "A5" : 'heavy_4e',
-        "A6" : 'hi_perf',
+        "A6" : 'hi_perf',            # Appears to include Lear Jets
         "A7" : 'helicopter',
         "B1" : 'cessna',
         "B2" : 'balloon',
@@ -190,7 +194,7 @@ if __name__ == "__main__":
 and data['aircraft'][i]['rssi'] > -49.5 \
 and 'seen' in data['aircraft'][i] \
 and 'category' in data['aircraft'][i] \
-and data['aircraft'][i]['category'] in [ "A6", "A7", "B2", "B7" ]:
+and data['aircraft'][i]['category'] in [ "A6", "A7", "B2" ]:       #  "B7", "A1","A2","A3","A4","A5","B1","B4" ]:
   
               seen = file_date - data['aircraft'][i]['seen']
               #print "\nseen : ", seen,
@@ -307,23 +311,30 @@ and age > helo_dict[hex]['newest_pos']['age']:
                       print "Found newer age of: ", datetime.datetime.utcfromtimestamp(age)
                       helo_dict[hex].update({'newest_age': age})
   
-  
-  
               # End, sighting is recent enough to be considered
   
       # End, processing of this one file is complete
   
     # End, processing of all aircraft files are complete
+
   
     # Done looking through all aircraft for candidates
   
     print "\n"
     pprint(helo_dict)
   
+
+    # Open-overwrite-text "helos.txt.new" output file
+    ht = open("helos.txt.new", 'w')
+
+
     # Look through helo_dict
     # For each entry in helo_dict
     for key in helo_dict.keys():
   
+        flight = helo_dict[key]['flight']
+        category = helo_dict[hex]['category']
+
         print "\n\tHex: ",key
         print "\tOldest: ",datetime.datetime.utcfromtimestamp(helo_dict[key]['oldest_age'])
         print "\tNewest: ",datetime.datetime.utcfromtimestamp(helo_dict[key]['newest_age'])
@@ -341,7 +352,6 @@ and age > helo_dict[hex]['newest_pos']['age']:
                     smtp_python2.py <email_addr> "Aircraft Alert!"
                 '''
                 for email_addr in email_list:
-                    flight = helo_dict[key]['flight']
                     cmd = './smtp_python2.py ' + email_addr + ' "Tail: ' + flight + ' reg: ' + key + ' category: ' + category + ' spotted!"'
                     print "DEBUG: cmd["+cmd+"]"
                     returned_value = subprocess.call(cmd, shell=True)  # returns the exit code in unix
@@ -364,6 +374,22 @@ and age > helo_dict[hex]['newest_pos']['age']:
                             'oldest_age': 2947.838145017624}}
             '''
   
+        # Add this aircraft to the "helos.txt.new" output file
+        # ht.write(flight + key + ' ' + category + '  ')
+        ht.write(flight + ' ' + category + '\n')
+
+    # Done, looking through helo_dict
+
+    # Close "helo.txt.new" file
+    ht.close()
+
+    # Move helos.txt.new to helos.txt
+    cmd = 'mv helos.txt helos.txt.old;mv helos.txt.new helos.txt'
+    print "DEBUG: cmd["+cmd+"]"
+    returned_value = subprocess.call(cmd, shell=True)  # returns the exit code in unix
+    print "\t\t** SYSTEM CALL RETURNED CODE: ", returned_value
+    print "\n"
+
   
     print '\n%s GMT     Aircraft: %d/%d      ' % (time.asctime(time.gmtime()), met_criteria,total_aircraft)
   
