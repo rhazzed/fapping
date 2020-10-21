@@ -4,7 +4,7 @@
 #
 # HISTORICAL INFORMATION -
 #
-#  2017-04-28  msipin  Derived from the 2020-10-09 version of fap.py
+#  2020-10-10  msipin  Derived from the 2020-10-09 version of fap.py
 ############################################
 
 import sys
