@@ -12,6 +12,8 @@
 #                    sudo ln -s /home/pi/Projects/fapping/helos.txt /run/dump1090-fa/
 #              Then you can retrieve this data from anywhere using this URL -
 #                    http://<PiAware_IP_Address>:8080/data/helos.txt
+#  2020-10-21  msipin  Filtered out multiple alerts for the same aircraft. Turned off some of the debugging
+#                      information to reduce display clutter.
 ############################################
 
 import sys
@@ -37,9 +39,9 @@ if __name__ == "__main__":
   email_list = []
 
   # Pickup whom to email alerts to from the command line
-  print "Arguments count: ", len(sys.argv)
+  #print "Arguments count: ", len(sys.argv)
   for i, arg in enumerate(sys.argv):
-      print "Argument ",i," : ",arg
+      #print "Argument ",i," : ",arg
       if i >= 1:
           email_list.append(arg)
 
@@ -116,17 +118,21 @@ if __name__ == "__main__":
   
   
   met_criteria=0
-  total_aircraft=0
+  total_reports=0
+
+  # Dictionary of aircraft we have issued alerts on, and when we issued it/them
+  # NOTE: THIS DICTIONARY MUST SURVIVE ITERATIONS! DO NOT DESTROY IT IN THE LOOP BELOW!!!
+  alert_dict = {}
+
   while met_criteria == 0:
   
-    now = time.time()
-    print "\nTIME_NOW: ", now
-    print "TIME_NOW: ",datetime.datetime.utcfromtimestamp(now)
+    ahora = time.time()
+    #print "\nTIME_NOW: ", ahora
+    #print "TIME_NOW: ",datetime.datetime.utcfromtimestamp(ahora)
   
-    max_age = now - MAX_AGE 
+    max_age = ahora - MAX_AGE 
     #print "\nMAX_AGE:  ", max_age
-    print "\nMAX_AGE:  ", max_age
-    print "MAX_AGE:  ", datetime.datetime.utcfromtimestamp(max_age)
+    #print "MAX_AGE:  ", datetime.datetime.utcfromtimestamp(max_age)
   
     # Dictionary of all helicopter data
     helo_dict = {}
@@ -137,14 +143,6 @@ if __name__ == "__main__":
     aircraft_files.append('/run/dump1090-fa/aircraft.json')
   
     for aircraft_file in aircraft_files:
-  
-      # If we are looping in "continuous" mode, clear out the grid
-      # BUG BUG BUG:
-      # BUG BUG BUG: The logic below fails if we ever want to repeatedly generate
-      #              this plot *AND* are using multiple files to do so. MUST change
-      #              this logic if ever we want to BOTH repeatedly generate the
-      #              plot *AND* we are using multiple files to do so.
-      # BUG BUG BUG:
   
       aircraft_data=open(aircraft_file)
       data = json.load(aircraft_data)
@@ -161,8 +159,8 @@ if __name__ == "__main__":
   
       #print "\nNumber of Aircraft found: ", num_found
   
-      # Add aircraft from this file to total-found
-      total_aircraft += num_found
+      # Add reports from this file to total-found
+      total_reports += num_found
   
 
       '''
@@ -198,7 +196,7 @@ and data['aircraft'][i]['category'] in [ "A6","A7","B2","B7" ]:       #  "A1","A
   
               seen = file_date - data['aircraft'][i]['seen']
               #print "\nseen : ", seen,
-              #age = now - seen
+              #age = ahora - seen
               age = seen
               #print "\nage of siting: ", age,
               hex = data['aircraft'][i]['hex']
@@ -225,35 +223,35 @@ and data['aircraft'][i]['category'] in [ "A6","A7","B2","B7" ]:       #  "A1","A
   
                   # If hex is NOT in helo_dict
                   if hex not in helo_dict.keys(): 
-                      print "\n\nHex: ",hex, " Not present - adding it now...",
+                      #print "\n\nHex: ",hex, " Not present - adding it now...",
                       # Add default info to helo_dict
                       helo_dict[hex] = aircraft
-                  else: 
-                      print "\n\nHex: ",hex, " already present",
+                  #else: 
+                  #    print "\n\nHex: ",hex, " already present",
   
-                  print "\n", age,
+                  #print "\n", age,
                   met_criteria += 1
-                  for feature in features:
-  	            if feature in data['aircraft'][i]:
-  	                print " ", feature, ": ", data['aircraft'][i][feature],
-  	            else:
-  	                print " ", feature, ": ", " unk ",
+                  #for feature in features:
+  	          #  if feature in data['aircraft'][i]:
+  	          #      print " ", feature, ": ", data['aircraft'][i][feature],
+  	          #  else:
+  	          #      print " ", feature, ": ", " unk ",
   
-                  print "\nFound age of: ", datetime.datetime.utcfromtimestamp(age)
-                  try:
-                      print "  was newest: ", datetime.datetime.utcfromtimestamp(helo_dict[hex]['newest_age'])
-                  except:
-                      print "unk"
+                  #print "\nFound age of: ", datetime.datetime.utcfromtimestamp(age)
+                  #try:
+                  #    print "  was newest: ", datetime.datetime.utcfromtimestamp(helo_dict[hex]['newest_age'])
+                  #except:
+                  #    print "unk"
   
-                  try:
-                      print " was pos age: ", datetime.datetime.utcfromtimestamp(helo_dict[hex]['newest_pos']['age'])
-                  except:
-                      print "unk"
+                  #try:
+                  #    print " was pos age: ", datetime.datetime.utcfromtimestamp(helo_dict[hex]['newest_pos']['age'])
+                  #except:
+                  #    print "unk"
   
-                  try:
-                     print "  was oldest: ", datetime.datetime.utcfromtimestamp(helo_dict[hex]['oldest_age'])
-                  except:
-                      print "unk"
+                  #try:
+                  #   print "  was oldest: ", datetime.datetime.utcfromtimestamp(helo_dict[hex]['oldest_age'])
+                  #except:
+                  #    print "unk"
 
                   flight = helo_dict[hex]['flight']
                   #print "DEBUG: flight was   : ",flight
@@ -262,30 +260,32 @@ and data['aircraft'][i]['category'] in [ "A6","A7","B2","B7" ]:       #  "A1","A
                         #print "DEBUG: found flight attribute!"
                         flight = data['aircraft'][i]['flight']
                         #print "DEBUG: flight now is: ",flight
-                        helo_dict[hex]['flight'] = flight
+                        helo_dict[hex].update({'flight': flight})
                   except:
                      # Do nothing...
-                     print "      no flight number"
-                  print "      flight: ", flight
+                     nop=1;
+                     #print "      no flight number"
+                  #print "      flight: ", flight
 
                   category = helo_dict[hex]['category']
-                  print "DEBUG: category was   : ",category
+                  #print "DEBUG: category was   : ",category
                   try:
                      if data['aircraft'][i]['category'] != "unk":
-                        print "DEBUG: found category attribute!"
+                        #print "DEBUG: found category attribute!"
                         category = data['aircraft'][i]['category']
-                        print "DEBUG: category now is: ",category
-                        helo_dict[hex]['category'] = category
+                        #print "DEBUG: category now is: ",category
+                        helo_dict[hex].update({'category': category})
                   except:
                      # Do nothing...
-                     print "      no category"
-                  print "    category: ", category
+                     #print "      no category"
+                     nop=1;
+                  #print "    category: ", category
 
   
                   # Keep oldest age for hex
                   if age < helo_dict[hex]['oldest_age']:
-                      print "\nFound older age of: ",age
-                      print "Found older age of: ", datetime.datetime.utcfromtimestamp(age)
+                      #print "\nFound older age of: ",age
+                      #print "Found older age of: ", datetime.datetime.utcfromtimestamp(age)
                       helo_dict[hex].update({'oldest_age': age})
   
   
@@ -295,8 +295,8 @@ and 'lon' in data['aircraft'][i] \
 and 'alt_baro' in data['aircraft'][i] \
 and age > helo_dict[hex]['newest_pos']['age']:
   
-                      print "\nFound newer position with age of: ",age
-                      print "Found newer position with age of: ", datetime.datetime.utcfromtimestamp(age)
+                      #print "\nFound newer position with age of: ",age
+                      #print "Found newer position with age of: ", datetime.datetime.utcfromtimestamp(age)
                       helo_dict[hex]['newest_pos'].update({
                           'age': age,
                           'lat': data['aircraft'][i]['lat'],
@@ -307,8 +307,8 @@ and age > helo_dict[hex]['newest_pos']['age']:
   
                   # keep newest age for hex
                   if age > helo_dict[hex]['newest_age']:
-                      print "\nFound newer age of: ",age
-                      print "Found newer age of: ", datetime.datetime.utcfromtimestamp(age)
+                      #print "\nFound newer age of: ",age
+                      #print "Found newer age of: ", datetime.datetime.utcfromtimestamp(age)
                       helo_dict[hex].update({'newest_age': age})
   
               # End, sighting is recent enough to be considered
@@ -322,6 +322,30 @@ and age > helo_dict[hex]['newest_pos']['age']:
   
     print "\n"
     pprint(helo_dict)
+
+
+
+    # REMOVE HELO ALERTS FROM ALERT-TABLE THAT HAVE "aged out"
+    '''
+                alert = {
+                    'age': ahora,
+                    'hex': key
+                }
+    '''
+    for akey in alert_dict.keys(): 
+        # Check if alert for akey has aged-out
+
+        print "\nTimestamp on alert for ",akey,": ",alert_dict[akey]['age']
+        print "Timestamp on alert for ",akey,": ", datetime.datetime.utcfromtimestamp(alert_dict[akey]['age'])
+
+        if alert_dict[akey]['age'] < max_age:
+            print "\nAlert for ",akey," older than: ",max_age
+            print "Alert for ",akey," older than: ", datetime.datetime.utcfromtimestamp(max_age)
+
+            print "\nRemoving ",akey," from alert_dict"
+            del alert_dict[hex]
+        else:
+            print "\nLeaving ",akey," in the alert_dict because it hasn't aged-out yet"
   
 
     # Open-overwrite-text "helos.txt.new" output file
@@ -340,24 +364,42 @@ and age > helo_dict[hex]['newest_pos']['age']:
         print "\tNewest: ",datetime.datetime.utcfromtimestamp(helo_dict[key]['newest_age'])
   
         # If newest_age is "recent enough"...
-        if helo_dict[key]['newest_age'] > (now - alert_window):
+        if helo_dict[key]['newest_age'] > (ahora - alert_window):
             # This sighting is new. See if it's been alerted on before
   
-            if helo_dict[key]['oldest_age'] > (now - alert_window):
+            if helo_dict[key]['oldest_age'] > (ahora - alert_window):
   
-                print "\n\t**** ALERT: NEW AIRCRAFT: ",key
+                # See if this helo has been alerted on before
+                alert = {
+                    'age': ahora,
+                    'hex': key
+                }
+
+                # If key is NOT in helo_dict
+                if key not in alert_dict.keys(): 
+
+                    print "\n\nHex: ",key, " Not present in alert table - adding it now, and allowing an alert to be issued",
+
+                    # Add alert info to alert_dict
+                    alert_dict[key] = alert
+
+                    print "\n\t**** ALERT: NEW AIRCRAFT: ",key
   
-                # Make call to send text/email
-                '''
-                    smtp_python2.py <email_addr> "Aircraft Alert!"
-                '''
-                for email_addr in email_list:
-                    cmd = './smtp_python2.py ' + email_addr + ' "Tail: ' + flight + ' reg: ' + key + ' category: ' + category + ' spotted!"'
-                    print "DEBUG: cmd["+cmd+"]"
-                    returned_value = subprocess.call(cmd, shell=True)  # returns the exit code in unix
-                    print "\t\t** SYSTEM CALL RETURNED CODE: ", returned_value
-                    print "\n"
-  
+                    # Make call to send text/email
+                    '''
+                        smtp_python2.py <email_addr> "Aircraft Alert!"
+                    '''
+                    for email_addr in email_list:
+                        cmd = './smtp_python2.py ' + email_addr + ' "Tail: ' + flight + ' reg: ' + key + ' category: ' + category + ' spotted!"'
+                        print "\n\nDEBUG: cmd["+cmd+"]"
+                        returned_value = subprocess.call(cmd, shell=True)  # returns the exit code in unix
+                        print "\t\t** SYSTEM CALL RETURNED CODE: ", returned_value
+                        print "\n"
+
+                else: 
+                    print "\n\nHex: ",hex, " already present in alert table. Not alerting on it again",
+
+
             else:
                 print "\t     Already alerted on: ",key
         else:
@@ -385,20 +427,20 @@ and age > helo_dict[hex]['newest_pos']['age']:
 
     # Move helos.txt.new to helos.txt
     cmd = 'mv helos.txt helos.txt.old;mv helos.txt.new helos.txt'
-    print "DEBUG: cmd["+cmd+"]"
+    #print "DEBUG: cmd["+cmd+"]"
     returned_value = subprocess.call(cmd, shell=True)  # returns the exit code in unix
-    print "\t\t** SYSTEM CALL RETURNED CODE: ", returned_value
-    print "\n"
+    #print "\t\t** SYSTEM CALL RETURNED CODE: ", returned_value
+    #print "\n"
 
   
-    print '\n%s GMT     Aircraft: %d/%d      ' % (time.asctime(time.gmtime()), met_criteria,total_aircraft)
+    print '\n%s GMT     Sightings %d/%d Records' % (time.asctime(time.gmtime()), met_criteria,total_reports)
   
   
     print ""
   
     if continuous == 1:
       met_criteria=0
-      total_aircraft=0
+      total_reports=0
       sys.stdout.flush()
       time.sleep(recheck_interval)
       print "\n\n\n*******************************************************\n\n"

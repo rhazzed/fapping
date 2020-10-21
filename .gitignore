@@ -4,3 +4,4 @@ cts
 .gitignore
 checkfixwifi.log
 email_creds.conf
+sccs
