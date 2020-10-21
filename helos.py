@@ -354,7 +354,7 @@ and age > helo_dict[hex]['newest_pos']['age']:
             print "Alert for ",akey," ocurred prior to: ", datetime.datetime.utcfromtimestamp(max_age)
 
             print "\nRemoving ",akey," from alert_dict"
-            del alert_dict[hex]
+            del alert_dict[akey]
         else:
             print "\nLeaving ",akey," in the alert_dict because it hasn't aged-out yet"
   
