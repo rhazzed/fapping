@@ -14,6 +14,7 @@
 #                    http://<PiAware_IP_Address>:8080/data/helos.txt
 #  2020-10-21  msipin  Filtered out multiple alerts for the same aircraft. Turned off some of the debugging
 #                      information to reduce display clutter.
+#  2020-10-22  msipin  Included ICAO number in "helos.txt" and changed field order to ICAO, TAIL, CATEGORY.
 ############################################
 
 import sys
@@ -66,7 +67,7 @@ if __name__ == "__main__":
   # DEFAULT TO 30 MINUTES?
   MAX_AGE = (30.0*60.0)	# 30 mins - use for Production
   #MAX_AGE = (24.0*60.0*60.0)	# Use for testing
-  
+
   # Alert window - Max. age for an alert to be generated
   # NOTE: MUST be more than recheck_interval
   alert_window = (90)  # 90 seconds - use for Production
@@ -413,6 +414,7 @@ and age > helo_dict[hex]['newest_pos']['age']:
 
             else:
                 print "\t     Already alerted on: ",key
+
         else:
             # We've seen this aircraft before. Don't alert on it
             print "\t     Old sighting of: ",key
@@ -426,11 +428,10 @@ and age > helo_dict[hex]['newest_pos']['age']:
                                            'lon': -117.375309},
                             'oldest_age': 2947.838145017624}}
             '''
-  
-        # Add this aircraft to the "helos.txt.new" output file
-        # ht.write(flight + key + ' ' + category + '  ')
-        ht.write(flight + ' ' + category + '\n')
 
+
+        # This sighting should be made available to external programs
+        ht.write(key + ' ' + flight + ' ' + category + '\n')
     # Done, looking through helo_dict
 
     # Close "helo.txt.new" file
