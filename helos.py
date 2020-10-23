@@ -126,8 +126,9 @@ if __name__ == "__main__":
   alert_categories = []
 
   try:
-      alert_categories=ConfigSectionMap(acct)['categories']
-      print("\nalerts.conf: categories = [{0}]".format(alert_categories))
+      categories=ConfigSectionMap(acct)['categories']
+      print("\nalerts.conf: categories = [{0}]".format(categories))
+      alert_categories = categories.split()
   except KeyError:
       print("\nERROR: No value for [{0}][categories] in config file\n".format(acct))
   
@@ -291,14 +292,27 @@ if __name__ == "__main__":
   
       # Add reports from this file to total-found
       total_reports += num_found
+
+
+
+      '''
+              # If aircraft was FOUND in one of these lists            PROCESS_IT
+              found_in_categories = alert_categories is NOT empty and aircraft has category and category in alert_categories
+              found_in_tails      = alert_tails      is NOT empty and aircraft has flight   and flight   in alert_tails
+              found_in_icaos      = alert_icaos      is NOT empty and aircraft has hex      and flight   in alert_icaos
+
+              # If all lists are EMPTY,                                PROCESS_IT
+
+      '''
   
 
       for i in range(0, num_found):
           if 'rssi' in data['aircraft'][i] \
 and data['aircraft'][i]['rssi'] > -49.5 \
-and ( ( (not bool(alert_categories)) or  (bool(alert_categories) and 'category' in data['aircraft'][i] and data['aircraft'][i]['category'] in alert_categories) ) \
-or    ( (not bool(alert_tails))      or  (bool(alert_tails)      and 'flight'   in data['aircraft'][i] and data['aircraft'][i]['flight']   in alert_tails) ) \
-or    ( (not bool(alert_icaos))      or  (bool(alert_icaos)      and 'hex'      in data['aircraft'][i] and data['aircraft'][i]['hex']      in alert_icaos) )) \
+and ( ( (bool(alert_categories) and 'category' in data['aircraft'][i] and data['aircraft'][i]['category'] in alert_categories) ) \
+or    ( (bool(alert_tails)      and 'flight'   in data['aircraft'][i] and data['aircraft'][i]['flight']   in alert_tails) ) \
+or    ( (bool(alert_icaos)      and 'hex'      in data['aircraft'][i] and data['aircraft'][i]['hex']      in alert_icaos) ) \
+or    ( not(bool(alert_categories)) and not(bool(alert_tails)) and not(bool(alert_icaos)))) \
 and 'seen' in data['aircraft'][i]:
   
               seen = file_date - data['aircraft'][i]['seen']
