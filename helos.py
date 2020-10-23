@@ -15,6 +15,7 @@
 #  2020-10-21  msipin  Filtered out multiple alerts for the same aircraft. Turned off some of the debugging
 #                      information to reduce display clutter.
 #  2020-10-22  msipin  Included ICAO number in "helos.txt" and changed field order to ICAO, TAIL, CATEGORY.
+#  2020-10-23  msipin  Picked up email list and alert categories from configuration file
 ############################################
 
 import sys
@@ -28,6 +29,29 @@ import datetime
 import subprocess
 
 
+try:
+    import configparser
+except ImportError:
+    print("\nERROR: Can't find 'configparser'.  Try performing 'apt-get install python-configparser'\n")
+    sys.exit(-1)
+
+
+
+def ConfigSectionMap(section):
+    dict1 = {}
+    options = Config.options(section)
+    for option in options:
+        try:
+            dict1[option] = Config.get(section, option)
+            if dict1[option] == -1:
+                DebugPrint("skip: %s" % option)
+        except:
+            print("exception on %s!" % option)
+            dict1[option] = None
+    return dict1
+
+
+
 
 # If a signal causes us to terminate, exit gracefully
 def Exit_gracefully(signal, frame):
@@ -37,19 +61,124 @@ def Exit_gracefully(signal, frame):
 
 if __name__ == "__main__":
 
+
+  # Read alert.config
+  Config = configparser.ConfigParser()
+  Config.read("alerts.conf")
+  #print(Config.sections())
+
+  acct=ConfigSectionMap("default")['user']
+
+
   email_list = []
 
-  # Pickup whom to email alerts to from the command line
+
+  # Pickup whom to email alerts to from the config file
+  try:
+      send_tos=ConfigSectionMap(acct)['email_list']
+      print("\nalerts.conf: email_list = [{0}]".format(send_tos))
+      email_list = send_tos.split()
+  except KeyError:
+      print("\nERROR: No value for [{0}][email_list] in config file\n".format(acct))
+
+
+  # If provided on the command line, add to alert list
   #print "Arguments count: ", len(sys.argv)
   for i, arg in enumerate(sys.argv):
       #print "Argument ",i," : ",arg
       if i >= 1:
           email_list.append(arg)
 
+
   print "EMAIL LIST: ",email_list
 
+  ## If debugging, prolly wanna exit now...
+  #sys.exit(-1)
+
   
+  '''
+    Categories taken from /home/dump1090/public_html/markers.js, excpet UAVs, which
+    was found somewhere else and added here by hand -
+
+    "A1" : 'cessna',
+    "A2" : 'jet_nonswept',
+    "A3" : 'airliner',
+    "A4" : 'heavy_2e',
+    "A5" : 'heavy_4e',           # "Wake-inducing" aircraft, including air-to-air refueling tankers --but-- also, "large" Airliners =(
+    "A6" : 'hi_perf',            # Appears to include Lear Jets, Bombardier
+    "A7" : 'helicopter',
+    "B1" : 'cessna',
+    "B2" : 'balloon',
+    "B4" : 'cessna',
+    "B6" : 'UAV',    # NOT FOUND IN SOURCE (added by hand) - THIS ONE HAS UAVs!!!!
+    "B7" : 'hi_perf',
+    'C0' : 'ground_unknown',
+    'C1' : 'ground_emergency',
+    'C2' : 'ground_service',
+    'C3' : 'ground_fixed',
+    "C4" : 'ground_fixed',
+    "C5" : 'ground_fixed',
+    "C6" : 'ground_unknown',
+    "C7" : 'ground_unknown'
+  '''
+
+  # Develop alert categories
+  alert_categories = []
+
+  try:
+      alert_categories=ConfigSectionMap(acct)['categories']
+      print("\nalerts.conf: categories = [{0}]".format(alert_categories))
+  except KeyError:
+      print("\nERROR: No value for [{0}][categories] in config file\n".format(acct))
   
+
+  print "CATEGORIES: ",alert_categories
+
+  ## If debugging, prolly wanna exit now...
+  #sys.exit(-1)
+
+
+
+  # Develop alert tail numbers
+  alert_tails = []
+
+  try:
+      # NOTE: FLIGHTS ARE ALWAYS LEFT-ALIGNED, AND PADDED TO 8 CHARACTERS!
+      tails=ConfigSectionMap(acct)['tail_list']
+      print("\nalerts.conf: tail_list = [{0}]".format(tails))
+      for tail in tails.split():
+          full_tail = "{:<8}".format(tail)
+          alert_tails.append(full_tail)
+  except KeyError:
+      print("\nERROR: No value for [{0}][tail_list] in config file\n".format(acct))
+  
+  print "TAILS: ",alert_tails
+
+
+  ## If debugging, prolly wanna exit now...
+  ##sys.exit(-1)
+
+
+
+  # Develop icaos
+  alert_icaos = []
+
+  try:
+      icaos=ConfigSectionMap(acct)['icao_list']
+      print("\nalerts.conf: icao_list = [{0}]".format(icaos))
+      for icao in icaos.split():
+          alert_icaos.append(icao)
+  except KeyError:
+      print("\nERROR: No value for [{0}][icao_list] in config file\n".format(acct))
+
+  print "ICAOS: ",alert_icaos
+
+
+  ## If debugging, prolly wanna exit now...
+  #sys.exit(-1)
+
+
+
   
   ##   DATADIR ="/run/dump1090-fa"
   ##   CURRDATA ="${DATADIR}/aircraft.json"
@@ -164,47 +293,13 @@ if __name__ == "__main__":
       total_reports += num_found
   
 
-      '''
-        Categories taken from /home/dump1090/public_html/markers.js, excpet UAVs, which
-        was found somewhere else and added here by hand -
-
-        "A1" : 'cessna',
-        "A2" : 'jet_nonswept',
-        "A3" : 'airliner',
-        "A4" : 'heavy_2e',
-        "A5" : 'heavy_4e',
-        "A6" : 'hi_perf',            # Appears to include Lear Jets, Bombardier
-        "A7" : 'helicopter',
-        "B1" : 'cessna',
-        "B2" : 'balloon',
-        "B4" : 'cessna',
-        "B6" : 'UAV',    # NOT FOUND IN SOURCE (added by hand) - THIS ONE HAS UAVs!!!!
-        "B7" : 'hi_perf',
-        'C0' : 'ground_unknown',
-        'C1' : 'ground_emergency',
-        'C2' : 'ground_service',
-        'C3' : 'ground_fixed',
-        "C4" : 'ground_fixed',
-        "C5" : 'ground_fixed',
-        "C6" : 'ground_unknown',
-        "C7" : 'ground_unknown'
-      '''
-      features = [ 'hex', 'flight', 'lat', 'lon', 'alt_baro' ]
-
-      # UNCOMMENT ONLY ONE OF THESE, DEPENDING UPON WHAT YOU WANT TO ALERT ON -
-      # For Testing -
-      #alert_categories = [ "A1","A2","A3","A4","A5","A6","A7","B1","B2","B4","B6","B7" ]
-      # For Eric -
-      alert_categories = [ "A7","B2","B6","B7" ]
-      # For Mike -
-      #alert_categories = [ "A7","B2","B6","B7" ]
-
       for i in range(0, num_found):
           if 'rssi' in data['aircraft'][i] \
 and data['aircraft'][i]['rssi'] > -49.5 \
-and 'seen' in data['aircraft'][i] \
-and 'category' in data['aircraft'][i] \
-and data['aircraft'][i]['category'] in alert_categories:
+and ( ( (not bool(alert_categories)) or  (bool(alert_categories) and 'category' in data['aircraft'][i] and data['aircraft'][i]['category'] in alert_categories) ) \
+or    ( (not bool(alert_tails))      or  (bool(alert_tails)      and 'flight'   in data['aircraft'][i] and data['aircraft'][i]['flight']   in alert_tails) ) \
+or    ( (not bool(alert_icaos))      or  (bool(alert_icaos)      and 'hex'      in data['aircraft'][i] and data['aircraft'][i]['hex']      in alert_icaos) )) \
+and 'seen' in data['aircraft'][i]:
   
               seen = file_date - data['aircraft'][i]['seen']
               #print "\nseen : ", seen,
@@ -243,11 +338,6 @@ and data['aircraft'][i]['category'] in alert_categories:
   
                   #print "\n", age,
                   met_criteria += 1
-                  #for feature in features:
-  	          #  if feature in data['aircraft'][i]:
-  	          #      print " ", feature, ": ", data['aircraft'][i][feature],
-  	          #  else:
-  	          #      print " ", feature, ": ", " unk ",
   
                   #print "\nFound age of: ", datetime.datetime.utcfromtimestamp(age)
                   #try:
@@ -402,7 +492,7 @@ and age > helo_dict[hex]['newest_pos']['age']:
                         smtp_python2.py <email_addr> "Aircraft Alert!"
                     '''
                     for email_addr in email_list:
-                        cmd = './smtp_python2.py ' + email_addr + ' "Tail: ' + flight + ' reg: ' + key + ' category: ' + category + ' spotted!"'
+                        cmd = './smtp_python2.py ' + email_addr + ' "Tail: ' + flight + ' reg: ' + key + ' category: ' + category + ' spotted!" >/dev/null 2>&1'
                         print "\n\nDEBUG: cmd["+cmd+"]"
                         returned_value = subprocess.call(cmd, shell=True)  # returns the exit code in unix
                         print "\t\t** SYSTEM CALL RETURNED CODE: ", returned_value
