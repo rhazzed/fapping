@@ -16,6 +16,9 @@
 #                      information to reduce display clutter.
 #  2020-10-22  msipin  Included ICAO number in "helos.txt" and changed field order to ICAO, TAIL, CATEGORY.
 #  2020-10-23  msipin  Picked up email list and alert categories from configuration file
+#  2020-11-03  msipin  Added exception-handling if "aircraft.json" is (temporarily) unavailable (aka being updated
+#                      by the PiAware code as we're trying to read it). Added tail_ignore_list, tail/flight numbers
+#                      to ignore.
 ############################################
 
 import sys
@@ -180,6 +183,26 @@ if __name__ == "__main__":
 
 
 
+  # Develop IGNORE tail numbers
+  ignore_tails = []
+
+  try:
+      # NOTE: FLIGHTS ARE ALWAYS LEFT-ALIGNED, AND PADDED TO 8 CHARACTERS!
+      ignores=ConfigSectionMap(acct)['tail_ignore_list']
+      print("\nalerts.conf: tail_ignore_list = [{0}]".format(ignores))
+      for ignore in ignores.split():
+          full_ignore_tail = "{:<8}".format(ignore)
+          ignore_tails.append(full_ignore_tail)
+  except KeyError:
+      print("\nERROR: No value for [{0}][tail_ignore_list] in config file\n".format(acct))
+  
+  print "IGNORE_TAILS: ",ignore_tails
+
+
+  ## If debugging, prolly wanna exit now...
+  ##sys.exit(-1)
+
+
   
   ##   DATADIR ="/run/dump1090-fa"
   ##   CURRDATA ="${DATADIR}/aircraft.json"
@@ -275,7 +298,13 @@ if __name__ == "__main__":
   
     for aircraft_file in aircraft_files:
   
-      aircraft_data=open(aircraft_file)
+      try:
+      	aircraft_data=open(aircraft_file)
+      except IOError:
+      	print("\nError opening file [{0}]\n".format(aircraft_file))
+      	continue
+
+
       data = json.load(aircraft_data)
       #pprint(data)
       aircraft_data.close()
@@ -303,6 +332,8 @@ if __name__ == "__main__":
 
               # If all lists are EMPTY,                                PROCESS_IT
 
+              # If found_in_ignores,                                   SKIP_IT
+
       '''
   
 
@@ -313,6 +344,7 @@ and ( ( (bool(alert_categories) and 'category' in data['aircraft'][i] and data['
 or    ( (bool(alert_tails)      and 'flight'   in data['aircraft'][i] and data['aircraft'][i]['flight']   in alert_tails) ) \
 or    ( (bool(alert_icaos)      and 'hex'      in data['aircraft'][i] and data['aircraft'][i]['hex']      in alert_icaos) ) \
 or    ( not(bool(alert_categories)) and not(bool(alert_tails)) and not(bool(alert_icaos)))) \
+and not ('flight'   in data['aircraft'][i] and data['aircraft'][i]['flight']   in ignore_tails) \
 and 'seen' in data['aircraft'][i]:
   
               seen = file_date - data['aircraft'][i]['seen']
@@ -681,5 +713,14 @@ keep newest age for hex
         **** ALERT: NEW AIRCRAFT:  ab7036
 
 Tue Oct 20 17:56:30 2020 GMT     Aircraft: 38/13854
+
+
+ERROR:
+
+
+Traceback (most recent call last):
+  File "./helos.py", line 278, in <module>
+    aircraft_data=open(aircraft_file)
+IOError: [Errno 2] No such file or directory: '/run/dump1090-fa/aircraft.json'
 
 '''
