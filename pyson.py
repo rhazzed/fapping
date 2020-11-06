@@ -21,6 +21,7 @@
 #  2020-11-05  msipin  Changed ground speed from "speed" to "gs", and its datatype from INTEGER to FLOAT
 #                      due to post-2017 PiAware change. Changed "vert_rate" to "baro_rate", again, due to
 #                      post-2017 PiAware change.
+#  2020-11-06  msipin  Adapted to use *both* "baro_rate" and "geom_rate"
 ############################################
 
 import sys, math, time
@@ -40,6 +41,7 @@ KEYS_SORT_RANGE='r'
 KEYS_SORT_LEVEL='l'
 KEYS_SORT_GSPD='g'
 KEYS_SORT_VERT_RATE='v'
+KEYS_SORT_VERT_RATE2='2'
 KEYS_SORT_RSSI='d'
 KEYS_SORT_CALLSIGN='c'
 KEYS_SORT_SQUAWK='s'
@@ -59,6 +61,7 @@ KEY_TRACK='track'
 KEY_LAT='lat'
 KEY_LON='lon'
 KEY_VERT_RATE='baro_rate'
+KEY_VERT_RATE2='geom_rate'
 KEY_SQUAWK='squawk'
 KEY_RSSI='rssi'
 KEY_AGE='seen'
@@ -72,6 +75,7 @@ TRACK=NSN
 LAT=NSN
 LON=NSN
 VERT_RATE=NSN
+VERT_RATE2=NSN
 SQUAWK=NSN
 RSSI=NSN
 RANGE=NSN
@@ -90,7 +94,8 @@ TOO_DARN_OLD=22500	# (NOTE: 22500 = 6.25 hours) - This is arbitrary, but was
 			# was flying at 80 mph to cross a 500 mile wide receiver
 			# field-of-view.  (Why? Because... science!....not)
 
-SLEEP_INTERVAL=4
+#SLEEP_INTERVAL=4	# WAAAAAaaaaayyy too fast to see everything...
+SLEEP_INTERVAL=10
 
 # SQLite db variables - table name, field names, field datatypes, primary key name (etc.)
 table_name1 = 'airplanes'
@@ -106,6 +111,8 @@ track_field = KEY_TRACK # name of the column
 track_field_type = 'INTEGER'  # column data type
 vert_rate_field = KEY_VERT_RATE # name of the column
 vert_rate_field_type = 'INTEGER'  # column data type
+vert_rate2_field = KEY_VERT_RATE2 # name of the column
+vert_rate2_field_type = 'INTEGER'  # column data type
 squawk_field = KEY_SQUAWK # name of the column
 squawk_field_type = 'INTEGER'  # column data type
 age_field = KEY_AGE # name of the column
@@ -131,6 +138,8 @@ ORDER_BY_GSPD_ASC=" {sf} ASC, {kf} ASC".format(sf=gspd_field, kf=key_field)
 ORDER_BY_GSPD_DESC=" {sf} DESC, {kf} ASC".format(sf=gspd_field, kf=key_field)
 ORDER_BY_VERT_RATE_ASC=" abs({sf}) ASC, {kf} ASC".format(sf=vert_rate_field, kf=key_field)
 ORDER_BY_VERT_RATE_DESC=" abs({sf}) DESC, {kf} ASC".format(sf=vert_rate_field, kf=key_field)
+ORDER_BY_VERT_RATE2_ASC=" abs({sf}) ASC, {kf} ASC".format(sf=vert_rate2_field, kf=key_field)
+ORDER_BY_VERT_RATE2_DESC=" abs({sf}) DESC, {kf} ASC".format(sf=vert_rate2_field, kf=key_field)
 ORDER_BY_RSSI_ASC=" {sf} ASC, {rf} DESC, {kf} ASC".format(sf=rssi_field, rf=range_field, kf=key_field)
 ORDER_BY_RSSI_DESC=" {sf} DESC, {rf} ASC, {kf} ASC".format(sf=rssi_field, rf=range_field, kf=key_field)
 ORDER_BY_CALLSIGN_ASC=" {sf} ASC, {kf} ASC".format(sf=callsign_field, kf=key_field)
@@ -160,6 +169,7 @@ def init_display_vars():
     global LAT
     global LON
     global VERT_RATE
+    global VERT_RATE2
     global SQUAWK
     global RSSI 
     global RANGE
@@ -173,6 +183,7 @@ def init_display_vars():
     LAT=NSN
     LON=NSN
     VERT_RATE=NSN
+    VERT_RATE2=NSN
     SQUAWK=NSN
     RSSI=NSN
     RANGE=NSN
@@ -194,6 +205,8 @@ def _create_db_tables(conn2, c2):
     global track_field_type
     global vert_rate_field
     global vert_rate_field_type
+    global vert_rate2_field
+    global vert_rate2_field_type
     global squawk_field
     global squawk_field_type
     global age_field
@@ -234,6 +247,10 @@ def _create_db_tables(conn2, c2):
         # Add VERT_RATE column with a default row value
         c2.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'" \
                   .format(tn=table_name1, cn=vert_rate_field, ct=vert_rate_field_type, df=NSN))
+        # VERT_RATE2=NSN
+        # Add VERT_RATE2 column with a default row value
+        c2.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'" \
+                  .format(tn=table_name1, cn=vert_rate2_field, ct=vert_rate2_field_type, df=NSN))
         # SQUAWK=NSN
         # Add SQUAWK column with a default row value
         c2.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct} DEFAULT '{df}'" \
@@ -267,7 +284,7 @@ def _create_db_tables(conn2, c2):
     conn2.commit()
 
 
-def _add_or_update_db_row(conn2, c2, icao, callsign, level, gspd, track, lat, lon, vert_rate, squawk, rssi, age):
+def _add_or_update_db_row(conn2, c2, icao, callsign, level, gspd, track, lat, lon, vert_rate, vert_rate2, squawk, rssi, age):
 
     global NSN
     global RX_LAT
@@ -280,6 +297,7 @@ def _add_or_update_db_row(conn2, c2, icao, callsign, level, gspd, track, lat, lo
     global gspd_field
     global track_field
     global vert_rate_field
+    global vert_rate2_field
     global squawk_field
     global rssi_field
     global lat_field
@@ -317,6 +335,10 @@ def _add_or_update_db_row(conn2, c2, icao, callsign, level, gspd, track, lat, lo
     if (vert_rate != NSN):
         c2.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=vert_rate_field) + str(
             vert_rate) + ") WHERE {idf}=('".format(idf=key_field) + icao + "')")
+    # VERT_RATE2=NSN
+    if (vert_rate2 != NSN):
+        c2.execute("UPDATE {tn} SET {cn}=(".format(tn=table_name1, cn=vert_rate2_field) + str(
+            vert_rate2) + ") WHERE {idf}=('".format(idf=key_field) + icao + "')")
     # SQUAWK=NSN
     if (squawk != NSN):
         c2.execute(
@@ -573,6 +595,8 @@ while (should_continue == 1):
         #print '\tLON = %s' % LON
         VERT_RATE = line.get(KEY_VERT_RATE, NSN)
         #print '\tVERT_RATE = %s' % VERT_RATE
+        VERT_RATE2 = line.get(KEY_VERT_RATE2, NSN)
+        #print '\tVERT_RATE2 = %s' % VERT_RATE2
         SQUAWK= line.get(KEY_SQUAWK, NSN)
         #print '\tSQUAWK = %s' % SQUAWK
         RSSI = line.get(KEY_RSSI, NSN)
@@ -584,7 +608,7 @@ while (should_continue == 1):
 
 
         # Add this one aircraft's data to the database
-        _add_or_update_db_row(conn, c, ICAO, CALLSIGN, LEVEL, GSPD, TRACK, LAT, LON, VERT_RATE, SQUAWK, RSSI, AGE)
+        _add_or_update_db_row(conn, c, ICAO, CALLSIGN, LEVEL, GSPD, TRACK, LAT, LON, VERT_RATE, VERT_RATE2, SQUAWK, RSSI, AGE)
   # Done, for each IP address given on the command line
 
 
@@ -600,7 +624,7 @@ while (should_continue == 1):
 
 
   # Display column header
-  print "  ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK | dbm        ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK | dbm       \r"
+  print " ICAO  |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|VRTRT2|SQWK | dbm       ICAO  |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|VRTRT2|SQWK | dbm       \r"
 
   for icao_data in id_exists:
 
@@ -620,11 +644,12 @@ while (should_continue == 1):
     #LAT = line.get(KEY_LAT, NSN)
     #LON = line.get(KEY_LON, NSN)
     #VERT_RATE = line.get(KEY_VERT_RATE, NSN)
+    #VERT_RATE2 = line.get(KEY_VERT_RATE2, NSN)
     #SQUAWK= line.get(KEY_SQUAWK, NSN)
     #RSSI = line.get(KEY_RSSI, NSN)
     #AGE = line.get(KEY_AGE, NSN)
     #RANGE=KEY_RANGE
-    c.execute("SELECT {cn1},{cn2},{cn3},{cn4},{cn5},{cn6},{cn7},{cn8},{cn9},{cn10},{cn11} FROM {tn} WHERE {idf}=('".format( \
+    c.execute("SELECT {cn1},{cn2},{cn3},{cn4},{cn5},{cn6},{cn7},{cn8},{cn9},{cn10},{cn11},{cn12} FROM {tn} WHERE {idf}=('".format( \
            cn1=callsign_field, \
            cn2=level_field, \
            cn3=gspd_field, \
@@ -632,10 +657,11 @@ while (should_continue == 1):
            cn5=lat_field, \
            cn6=lon_field, \
            cn7=vert_rate_field, \
-           cn8=squawk_field, \
-           cn9=rssi_field, \
-           cn10=age_field, \
-           cn11=range_field, \
+           cn8=vert_rate2_field, \
+           cn9=squawk_field, \
+           cn10=rssi_field, \
+           cn11=age_field, \
+           cn12=range_field, \
            tn=table_name1, idf=key_field) + ICAO + "')")
     id_exists = c.fetchone()
     if id_exists:
@@ -646,10 +672,11 @@ while (should_continue == 1):
         LAT=id_exists[4]
         LON=id_exists[5]
         VERT_RATE=id_exists[6]
-        SQUAWK=id_exists[7]
-        RSSI=id_exists[8]
-        AGE=id_exists[9]
-        RANGE=id_exists[10]
+        VERT_RATE2=id_exists[7]
+        SQUAWK=id_exists[8]
+        RSSI=id_exists[9]
+        AGE=id_exists[10]
+        RANGE=id_exists[11]
     else:
         #print("\nNOTHING FOUND IN DB FOR ICAO = " + ICAO + "!\r")
         continue
@@ -676,7 +703,6 @@ while (should_continue == 1):
 
     # Display this ICAO's data
 
-    #print "%7s|%8s|%6s|%4s|%4s|%11s|%11s|%6s|%5s|%6s" % '{:7s}'.format(ICAO), '{:8s}'.format(CALLSIGN), '{:6s}'.format(LEVEL), '{:4s}'.format(GSPD), '{:4s}'.format(TRACK), '{:11s}'.format(LAT), '{:6s}'.format(LON), '{:5s}'.format(VERT_RATE), '{:6s}'.format(SQUAWK), '{:xs}'.format(RSSI)
     sys.stdout.write('{:7s}'.format(ICAO))
     sys.stdout.write('|')
     sys.stdout.write('{:8s}'.format(CALLSIGN))
@@ -712,6 +738,11 @@ while (should_continue == 1):
     else:
         sys.stdout.write('{:6s}'.format(''))
     sys.stdout.write('|')
+    if (VERT_RATE2 != NSN):
+        sys.stdout.write('{:6d}'.format(VERT_RATE2))
+    else:
+        sys.stdout.write('{:6s}'.format(''))
+    sys.stdout.write('|')
     if (SQUAWK != NSN):
         sys.stdout.write('{:5d}'.format(SQUAWK))
     else:
@@ -723,9 +754,6 @@ while (should_continue == 1):
         sys.stdout.write('{:6s}'.format(''))
 
     planes_shown=planes_shown+1
-
-    #instr = "{0} {1} {2} {3} {4} {5} {6} {7} {8} {9}".format(ICAO, CALLSIGN, LEVEL, GSPD, TRACK, LAT, LON, VERT_RATE, SQUAWK, RSSI)
-    #print instr
 
 
 
@@ -747,7 +775,7 @@ while (should_continue == 1):
           sys.stdout.write('    ')
 
       # Show a "blank plane"
-      sys.stdout.write('                                                             ')
+      sys.stdout.write('                                                                     ')
 
       planes_shown=planes_shown+1
 
@@ -809,6 +837,14 @@ while (should_continue == 1):
               ORDER_BY_CLAUSE=ORDER_BY_VERT_RATE_ASC
           else:
               ORDER_BY_CLAUSE=ORDER_BY_VERT_RATE_ASC
+      elif (s == KEYS_SORT_VERT_RATE2):
+          # Change order by clause to VERT_RATE2-delta, ASC
+          if (ORDER_BY_CLAUSE == ORDER_BY_VERT_RATE2_ASC):
+              ORDER_BY_CLAUSE=ORDER_BY_VERT_RATE2_DESC
+          elif (ORDER_BY_CLAUSE == ORDER_BY_VERT_RATE2_DESC):
+              ORDER_BY_CLAUSE=ORDER_BY_VERT_RATE2_ASC
+          else:
+              ORDER_BY_CLAUSE=ORDER_BY_VERT_RATE2_ASC
       elif (s == KEYS_SORT_RSSI):
           # Change order by clause to RSSI, ASC
           if (ORDER_BY_CLAUSE == ORDER_BY_RSSI_ASC):
