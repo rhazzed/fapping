@@ -18,6 +18,8 @@
 #                      and aircraft.json.
 #  2017-06-09  msipin  Updated range calculation with true Great Circle distance calculation.
 #  2020-10-09  msipin  Changed altitude key from "altitude" to "alt_baro" due to post-2017 PiAware change
+#  2020-11-05  msipin  Changed ground speed from "speed" to "gs", and its datatype from INTEGER to FLOAT
+#                      due to post-2017 PiAware change
 ############################################
 
 import sys, math, time
@@ -51,7 +53,7 @@ NSN=424242424242
 KEY_ICAO='hex'
 KEY_CALLSIGN='flight'
 KEY_LEVEL='alt_baro'
-KEY_GSPD='speed'
+KEY_GSPD='gs'
 KEY_TRACK='track'
 KEY_LAT='lat'
 KEY_LON='lon'
@@ -98,7 +100,7 @@ callsign_field_type = 'STRING'  # column data type
 level_field = KEY_LEVEL # name of the column
 level_field_type = 'INTEGER'  # column data type
 gspd_field = KEY_GSPD # name of the column
-gspd_field_type = 'INTEGER'  # column data type
+gspd_field_type = 'FLOAT'  # column data type
 track_field = KEY_TRACK # name of the column
 track_field_type = 'INTEGER'  # column data type
 vert_rate_field = KEY_VERT_RATE # name of the column
@@ -687,7 +689,7 @@ while (should_continue == 1):
         sys.stdout.write('{:6s}'.format(''))
     sys.stdout.write('|')
     if (GSPD!= NSN):
-        sys.stdout.write('{:4d}'.format(GSPD))
+        sys.stdout.write('{:4.0f}'.format(GSPD))
     else:
         sys.stdout.write('{:4s}'.format(''))
     sys.stdout.write('|')

@@ -15,6 +15,8 @@
 #                      receiver.json and aircraft.json.
 #     NOTE: THIS ELIMINATES THE lighttpd ENTRY REQUIRED BY THE 2017-05-26 RELEASE!!
 #  2020-10-09  msipin  Changed altitude key from "altitude" to "alt_baro" due to post-2017 PiAware change
+#  2020-11-05  msipin  Changed ground speed from "speed" to "gs", and its datatype from INTEGER to FLOAT
+#                      due to post-2017 PiAware change
 #######################################################
 
 tmp_file1=/var/tmp/$$.ason.1
@@ -140,8 +142,8 @@ for (i=1; i<= NF; i++) {
   # LEVEL = alt_baro:8575
   if ($1 == "alt_baro") LEVEL=$2
 
-  # GSPD = speed:125
-  if ($1 == "speed") GSPD=$2
+  # GSPD = gs:125
+  if ($1 == "gs") GSPD=$2
 
   # TRACK = track:117
   if ($1 == "track") TRACK=$2
@@ -178,7 +180,7 @@ if ((LAT != "") && (LON != "")) {
     # Calculate the approximate range (in nautical miles)
     RANGE=sqrt((LAT_DELTA_MILES*LAT_DELTA_MILES)+(LON_DELTA_MILES*LON_DELTA_MILES))*0.868976
 }
-if (NR > 1) printf "%7s|%8s|%6s|%4s|%4s|%6.1f|%6s|%5s|%6s", toupper(ICAO), CALLSIGN, LEVEL, GSPD, TRACK, RANGE, VERT_RATE, SQUAWK, RSSI
+if (NR > 1) printf "%7s|%8s|%6s|%4.0f|%4s|%6.1f|%6s|%5s|%6s", toupper(ICAO), CALLSIGN, LEVEL, GSPD, TRACK, RANGE, VERT_RATE, SQUAWK, RSSI
 
 for (i=0; i < 40; i++) { printf "                                                                                                                                                             \n"; }
 
