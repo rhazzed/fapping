@@ -115,7 +115,7 @@ for (i=1; i<= NF; i++) {
         # Calculate the approximate range (in nautical miles)
         RANGE=sqrt((LAT_DELTA_MILES*LAT_DELTA_MILES)+(LON_DELTA_MILES*LON_DELTA_MILES))*0.868976
     }
-    if (NR > 1) printf "%7s|%8s|%6s|%4s|%4s|%6.1f|%6s|%5s|%6s", toupper(ICAO), CALLSIGN, LEVEL, GSPD, TRACK, RANGE, VERT_RATE, SQUAWK, RSSI
+    if (NR > 1) printf "%7s|%8s|%6s|%4.0f|%4s|%6.1f|%6s|%5s|%6s", toupper(ICAO), CALLSIGN, LEVEL, GSPD, TRACK, RANGE, VERT_RATE, SQUAWK, RSSI
 
     loop++;
     if ((loop % 2) == 0) printf "\n"
