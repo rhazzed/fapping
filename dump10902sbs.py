@@ -8,6 +8,8 @@
 #  2017-06-10  msipin  Derived from fa2sbs.py
 #  2017-06-11  msipin  Switched from urllib to urllib2
 #  2020-10-09  msipin  Changed altitude key from "altitude" to "alt_baro" due to post-2017 PiAware change
+#  2020-11-05  msipin  Changed ground speed from "speed" to "gs" and changed "vert_rate" to "baro_rate",
+#                      also because of post-2017 PiAware change.
 ############################################
 
 import sys
@@ -41,11 +43,11 @@ KEY_ICAO='hex'
 KEY_CALLSIGN='flight'
 #KEY_LEVEL='altitude' # 2017 key
 KEY_LEVEL='alt_baro' # Post-2017 key (don't know when it changed...)
-KEY_GSPD='speed'
+KEY_GSPD='gs'
 KEY_TRACK='track'
 KEY_LAT='lat'
 KEY_LON='lon'
-KEY_VERT_RATE='vert_rate'
+KEY_VERT_RATE='baro_rate'
 KEY_SQUAWK='squawk'
 KEY_RSSI='rssi'
 KEY_AGE='seen'
@@ -311,17 +313,17 @@ raise SystemExit
 
 #  FORMAT OF DATA -
 #  [
-#  {"hex":"4b1619", "squawk":"1755", "flight":"SWR255X ", "lat":40.591457, "lon":22.919603, "validposition":1, "altitude":2225,  "vert_rate":1152,"track":350, "validtrack":1,"speed":243, "messages":595, "seen":0},
-#  {"hex":"4692d2", "squawk":"1753", "flight":"AEE5DL  ", "lat":40.740372, "lon":22.888367, "validposition":1, "altitude":9825,  "vert_rate":3008,"track":353, "validtrack":1,"speed":279, "messages":1262, "seen":0},
-#  {"hex":"73806a", "squawk":"7253", "flight":"ELY381  ", "lat":40.889053, "lon":22.823181, "validposition":1, "altitude":35975,  "vert_rate":0,"track":317, "validtrack":1,"speed":454, "messages":760, "seen":0},
-#  {"hex":"440910", "squawk":"7140", "flight":"", "lat":39.935256, "lon":21.309107, "validposition":1, "altitude":33000,  "vert_rate":128,"track":146, "validtrack":1,"speed":479, "messages":19, "seen":233},
-#  {"hex":"4ac8ba", "squawk":"7443", "flight":"SAS7831 ", "lat":40.352142, "lon":22.438965, "validposition":1, "altitude":38975,  "vert_rate":-64,"track":152, "validtrack":1,"speed":484, "messages":693, "seen":0},
-#  {"hex":"3c60d7", "squawk":"2064", "flight":"TUI1HB  ", "lat":40.697084, "lon":22.822723, "validposition":1, "altitude":36000,  "vert_rate":-64,"track":332, "validtrack":1,"speed":442, "messages":793, "seen":0},
-#  {"hex":"400e4e", "squawk":"3403", "flight":"EXS743  ", "lat":40.395355, "lon":23.167908, "validposition":1, "altitude":37000,  "vert_rate":0,"track":135, "validtrack":1,"speed":468, "messages":479, "seen":61},
-#  {"hex":"4071dd", "squawk":"4742", "flight":"EZY84EJ ", "lat":40.676102, "lon":22.633789, "validposition":1, "altitude":12625,  "vert_rate":-1408,"track":139, "validtrack":1,"speed":296, "messages":582, "seen":0},
-#  {"hex":"4ba916", "squawk":"1367", "flight":"THY6AX  ", "lat":40.821099, "lon":23.641642, "validposition":1, "altitude":35000,  "vert_rate":0,"track":87, "validtrack":1,"speed":459, "messages":1046, "seen":40},
-#  {"hex":"4ac8d9", "squawk":"7035", "flight":"BLX6A   ", "lat":39.833954, "lon":23.161867, "validposition":1, "altitude":39000,  "vert_rate":0,"track":164, "validtrack":1,"speed":468, "messages":1325, "seen":271},
-#  {"hex":"44d076", "squawk":"7026", "flight":"CFG3LX  ", "lat":39.570147, "lon":23.276245, "validposition":1, "altitude":34975,  "vert_rate":0,"track":145, "validtrack":1,"speed":432, "messages":1224, "seen":60},
-#  {"hex":"4408b1", "squawk":"7122", "flight":"EWG6640 ", "lat":39.779260, "lon":23.088379, "validposition":1, "altitude":37025,  "vert_rate":-64,"track":148, "validtrack":1,"speed":470, "messages":1315, "seen":184}
+#  {"hex":"4b1619", "squawk":"1755", "flight":"SWR255X ", "lat":40.591457, "lon":22.919603, "validposition":1, "altitude":2225,  "baro_rate":1152,"track":350, "validtrack":1,"gs":243, "messages":595, "seen":0},
+#  {"hex":"4692d2", "squawk":"1753", "flight":"AEE5DL  ", "lat":40.740372, "lon":22.888367, "validposition":1, "altitude":9825,  "baro_rate":3008,"track":353, "validtrack":1,"gs":279, "messages":1262, "seen":0},
+#  {"hex":"73806a", "squawk":"7253", "flight":"ELY381  ", "lat":40.889053, "lon":22.823181, "validposition":1, "altitude":35975,  "baro_rate":0,"track":317, "validtrack":1,"gs":454, "messages":760, "seen":0},
+#  {"hex":"440910", "squawk":"7140", "flight":"", "lat":39.935256, "lon":21.309107, "validposition":1, "altitude":33000,  "baro_rate":128,"track":146, "validtrack":1,"gs":479, "messages":19, "seen":233},
+#  {"hex":"4ac8ba", "squawk":"7443", "flight":"SAS7831 ", "lat":40.352142, "lon":22.438965, "validposition":1, "altitude":38975,  "baro_rate":-64,"track":152, "validtrack":1,"gs":484, "messages":693, "seen":0},
+#  {"hex":"3c60d7", "squawk":"2064", "flight":"TUI1HB  ", "lat":40.697084, "lon":22.822723, "validposition":1, "altitude":36000,  "baro_rate":-64,"track":332, "validtrack":1,"gs":442, "messages":793, "seen":0},
+#  {"hex":"400e4e", "squawk":"3403", "flight":"EXS743  ", "lat":40.395355, "lon":23.167908, "validposition":1, "altitude":37000,  "baro_rate":0,"track":135, "validtrack":1,"gs":468, "messages":479, "seen":61},
+#  {"hex":"4071dd", "squawk":"4742", "flight":"EZY84EJ ", "lat":40.676102, "lon":22.633789, "validposition":1, "altitude":12625,  "baro_rate":-1408,"track":139, "validtrack":1,"gs":296, "messages":582, "seen":0},
+#  {"hex":"4ba916", "squawk":"1367", "flight":"THY6AX  ", "lat":40.821099, "lon":23.641642, "validposition":1, "altitude":35000,  "baro_rate":0,"track":87, "validtrack":1,"gs":459, "messages":1046, "seen":40},
+#  {"hex":"4ac8d9", "squawk":"7035", "flight":"BLX6A   ", "lat":39.833954, "lon":23.161867, "validposition":1, "altitude":39000,  "baro_rate":0,"track":164, "validtrack":1,"gs":468, "messages":1325, "seen":271},
+#  {"hex":"44d076", "squawk":"7026", "flight":"CFG3LX  ", "lat":39.570147, "lon":23.276245, "validposition":1, "altitude":34975,  "baro_rate":0,"track":145, "validtrack":1,"gs":432, "messages":1224, "seen":60},
+#  {"hex":"4408b1", "squawk":"7122", "flight":"EWG6640 ", "lat":39.779260, "lon":23.088379, "validposition":1, "altitude":37025,  "baro_rate":-64,"track":148, "validtrack":1,"gs":470, "messages":1315, "seen":184}
 #  ]
 

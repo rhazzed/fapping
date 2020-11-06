@@ -13,6 +13,8 @@
 #  2017-06-09  msipin  Removed unneeded functions.
 #  2017-06-11  msipin  Switched from urllib to urllib2
 #  2020-10-09  msipin  Changed altitude key from "altitude" to "alt_baro" due to post-2017 PiAware change
+#  2020-11-05  msipin  Changed ground speed from "speed" to "gs" and "vert_rate" to "baro_rate" due to
+#                      post-2017 PiAware change.
 ############################################
 
 import sys
@@ -45,11 +47,11 @@ NSN=424242424242
 KEY_ICAO='hex'
 KEY_CALLSIGN='flight'
 KEY_LEVEL='alt_baro'
-KEY_GSPD='speed'
+KEY_GSPD='gs'
 KEY_TRACK='track'
 KEY_LAT='lat'
 KEY_LON='lon'
-KEY_VERT_RATE='vert_rate'
+KEY_VERT_RATE='baro_rate'
 KEY_SQUAWK='squawk'
 KEY_RSSI='rssi'
 KEY_AGE='seen'

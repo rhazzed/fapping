@@ -16,7 +16,8 @@
 #     NOTE: THIS ELIMINATES THE lighttpd ENTRY REQUIRED BY THE 2017-05-26 RELEASE!!
 #  2020-10-09  msipin  Changed altitude key from "altitude" to "alt_baro" due to post-2017 PiAware change
 #  2020-11-05  msipin  Changed ground speed from "speed" to "gs", and its datatype from INTEGER to FLOAT
-#                      due to post-2017 PiAware change
+#                      due to post-2017 PiAware change. Changed "vert_rate" to "baro_rate", again, due to
+#                      post-2017 PiAware change.
 #######################################################
 
 tmp_file1=/var/tmp/$$.ason.1
@@ -87,8 +88,8 @@ for (i=1; i<= NF; i++) {
   mpd_lon = 53.0000	# At 40 degrees N/S
 
   # Display header
-  #printf "  ICAO |CALLSIGN|LEVEL |GSPD|TRAK|LATTITUDE  |LONGITUDE  |VRT_RT|SQWK |RSSI       ICAO |CALLSIGN|LEVEL |GSPD|TRAK|LATTITUDE  |LONGITUDE  |VRT_RT|SQWK |RSSI  "
-  printf "  ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI       ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI  "
+  #printf "   ICAO |CALLSIGN|LEVEL |GSPD|TRAK|LATTITUDE  |LONGITUDE  |VRT_RT|SQWK |RSSI        ICAO |CALLSIGN|LEVEL |GSPD|TRAK|LATTITUDE  |LONGITUDE  |VRT_RT|SQWK |RSSI  "
+  printf "   ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI        ICAO |CALLSIGN|LEVEL |GSPD|TRAK|RANGE |VRT_RT|SQWK |RSSI  "
 
   # Initialize variables
   ICAO="";
@@ -101,7 +102,6 @@ for (i=1; i<= NF; i++) {
   if ($1 == "hex") {
 
     # Display old plane info
-    #if (NR > 1) printf "%7s|%8s|%6s|%4s|%4s|%11s|%11s|%6s|%5s|%6s", toupper(ICAO), CALLSIGN, LEVEL, GSPD, TRACK, LAT, LON, VERT_RATE, SQUAWK, RSSI
     RANGE=""
     if ((LAT != "") && (LON != "")) {
         DLAT=RX_LAT-LAT
@@ -115,7 +115,7 @@ for (i=1; i<= NF; i++) {
         # Calculate the approximate range (in nautical miles)
         RANGE=sqrt((LAT_DELTA_MILES*LAT_DELTA_MILES)+(LON_DELTA_MILES*LON_DELTA_MILES))*0.868976
     }
-    if (NR > 1) printf "%7s|%8s|%6s|%4.0f|%4s|%6.1f|%6s|%5s|%6s", toupper(ICAO), CALLSIGN, LEVEL, GSPD, TRACK, RANGE, VERT_RATE, SQUAWK, RSSI
+    if (NR > 1) printf "%8s|%8s|%6s|%4.0f|%4.0f|%6.1f|%6s|%5s|%6s", toupper(ICAO), CALLSIGN, LEVEL, GSPD, TRACK, RANGE, VERT_RATE, SQUAWK, RSSI
 
     loop++;
     if ((loop % 2) == 0) printf "\n"
@@ -154,8 +154,8 @@ for (i=1; i<= NF; i++) {
   # LON = lon:-114.065720
   if ($1 == "lon") LON=$2
 
-  # VERT_RATE = vert_rate:-1024
-  if ($1 == "vert_rate") VERT_RATE=$2
+  # VERT_RATE = baro_rate:-1024
+  if ($1 == "baro_rate") VERT_RATE=$2
 
   # SQUAWK = squawk:0675
   if ($1 == "squawk") SQUAWK=$2
@@ -166,7 +166,6 @@ for (i=1; i<= NF; i++) {
 } END {
 
 # Display last plane picked up
-#printf "%7s|%8s|%6s|%4s|%4s|%11s|%11s|%6s|%5s|%6s\n", toupper(ICAO), CALLSIGN, LEVEL, GSPD, TRACK, LAT, LON, VERT_RATE, SQUAWK, RSSI
 RANGE=""
 if ((LAT != "") && (LON != "")) {
     DLAT=RX_LAT-LAT
@@ -180,7 +179,7 @@ if ((LAT != "") && (LON != "")) {
     # Calculate the approximate range (in nautical miles)
     RANGE=sqrt((LAT_DELTA_MILES*LAT_DELTA_MILES)+(LON_DELTA_MILES*LON_DELTA_MILES))*0.868976
 }
-if (NR > 1) printf "%7s|%8s|%6s|%4.0f|%4s|%6.1f|%6s|%5s|%6s", toupper(ICAO), CALLSIGN, LEVEL, GSPD, TRACK, RANGE, VERT_RATE, SQUAWK, RSSI
+if (NR > 1) printf "%8s|%8s|%6s|%4.0f|%4.0f|%6.1f|%6s|%5s|%6s", toupper(ICAO), CALLSIGN, LEVEL, GSPD, TRACK, RANGE, VERT_RATE, SQUAWK, RSSI
 
 for (i=0; i < 40; i++) { printf "                                                                                                                                                             \n"; }
 

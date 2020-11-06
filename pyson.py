@@ -19,7 +19,8 @@
 #  2017-06-09  msipin  Updated range calculation with true Great Circle distance calculation.
 #  2020-10-09  msipin  Changed altitude key from "altitude" to "alt_baro" due to post-2017 PiAware change
 #  2020-11-05  msipin  Changed ground speed from "speed" to "gs", and its datatype from INTEGER to FLOAT
-#                      due to post-2017 PiAware change
+#                      due to post-2017 PiAware change. Changed "vert_rate" to "baro_rate", again, due to
+#                      post-2017 PiAware change.
 ############################################
 
 import sys, math, time
@@ -57,7 +58,7 @@ KEY_GSPD='gs'
 KEY_TRACK='track'
 KEY_LAT='lat'
 KEY_LON='lon'
-KEY_VERT_RATE='vert_rate'
+KEY_VERT_RATE='baro_rate'
 KEY_SQUAWK='squawk'
 KEY_RSSI='rssi'
 KEY_AGE='seen'
