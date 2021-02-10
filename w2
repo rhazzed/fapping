@@ -1,0 +1,33 @@
+#!/bin/sh
+##############################
+# w2 - A "watch" command that was gettting too complex for the command line...
+##############################
+
+DUR=10
+
+tput clear
+while [ 1 ]
+do
+	tput clear
+	date
+	echo
+	sort /run/dump1090-fa/helos.txt
+	echo
+
+	`cat /run/dump1090-fa/helos.txt | awk '{ print $1;print $2; }' |sort -u | grep -v unk|awk 'BEGIN { printf "egrep -i \"";}{ printf "%s|",$1;} END { printf "category.:.B[2,6,7]\" /run/dump1090-fa/aircraft.json\n" }'` | awk '{ printf "%s\n\n",$0; }'
+
+	#echo
+
+	egrep 'category.:.B[2,6,7]' /run/dump1090-fa/aircraft.json
+
+	echo
+
+	icaos=`cat /run/dump1090-fa/helos.txt | awk '{ printf "%s|",$1 } END {printf "jabber";};'`
+	egrep -i "$icaos" alerts.conf | grep "#"
+ 
+	sleep $DUR
+done
+
+
+exit 0 
+

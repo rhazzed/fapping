@@ -1,0 +1,18 @@
+#!/bin/sh
+#################################################
+# start_helos - A Linux shell script to start up the "helos.py" application
+#
+# HISTORICAL INFORMATION -
+#
+#  2020-02-09  msipin  Created
+#################################################
+
+# Give Linux and PiAware a chance to start up
+# TO-DO: Check whether this is kicked off by init, kind of like how the potatoCHIP project does, now...
+sleep 60
+
+### Start up the "helos.py" application to search for and alert on (via email) aircraft ICAO and tail numbers
+(nohup /home/pi/Projects/fapping/helos.py > /dev/null 2>&1)&
+
+exit 0
+
