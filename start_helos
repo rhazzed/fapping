@@ -5,14 +5,29 @@
 # HISTORICAL INFORMATION -
 #
 #  2020-02-09  msipin  Created
+#  2020-02-10  msipin  Added "delayed" mode ("-d") that /etc/rc.local should use to delay the
+#                      startup to let all other services come up, first.
 #################################################
 
-# Give Linux and PiAware a chance to start up
-# TO-DO: Check whether this is kicked off by init, kind of like how the potatoCHIP project does, now...
-sleep 60
+DELAY=0
+DURATION=60	# Default delay (in seconds) if the "-d" (delay) option is selected
+
+if [ $# -ge 1 -a ""$1"" = "-d" ]
+then
+	# Add delay
+	DELAY=1
+fi
+
+if [ ""$DELAY"" = 1 ]
+then
+	# Give Linux and PiAware a chance to start up
+	# TO-DO: Check whether this is kicked off by init, kind of like how the potatoCHIP project does, now...
+	sleep $DURATION
+fi
 
 ### Start up the "helos.py" application to search for and alert on (via email) aircraft ICAO and tail numbers
 (nohup /home/pi/Projects/fapping/helos.py > /dev/null 2>&1)&
+
 
 exit 0
 
