@@ -19,8 +19,8 @@
 # Create symbolic link between our github repo's "helo.py" output (helos.txt) and the web server
 ln -s /home/pi/Projects/fapping/helos.txt /run/dump1090-fa/
 
-### Start up the "helos.py" application to search for and alert on (via email) aircraft ICAO and tail numbers
-(nohup /home/pi/Projects/fapping/start_helos > /dev/null 2>&1)&
+### Start up the "helos.py" application (in "delayed" mode) to search for and alert on (via email) aircraft ICAO and tail numbers
+(nohup /home/pi/Projects/fapping/start_helos -d > /dev/null 2>&1)&
 
 
 exit 0
