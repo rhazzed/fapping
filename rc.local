@@ -17,6 +17,7 @@
 
 
 # Create symbolic link between our github repo's "helo.py" output (helos.txt) and the web server
+touch /home/pi/Projects/fapping/helos.txt
 ln -s /home/pi/Projects/fapping/helos.txt /run/dump1090-fa/
 
 ### Start up the "helos.py" application (in "delayed" mode) to search for and alert on (via email) aircraft ICAO and tail numbers
