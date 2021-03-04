@@ -14,7 +14,7 @@ do
 	sort /run/dump1090-fa/helos.txt
 	echo
 
-	`cat /run/dump1090-fa/helos.txt | awk '{ print $1;print $2; }' |sort -u | grep -v unk|awk 'BEGIN { printf "egrep -i \"";}{ printf "%s|",$1;} END { printf "category.:.B[2,6,7]\" /run/dump1090-fa/aircraft.json\n" }'` | awk '{ printf "%s\n\n",$0; }'
+	`cat /run/dump1090-fa/helos.txt | awk '{ print $1;print $2; }' | grep "..." |sort -u | grep -v unk|awk 'BEGIN { printf "egrep -i \"";}{ printf "%s|",$1;} END { printf "category.:.B[2,6,7]\" /run/dump1090-fa/aircraft.json\n" }'` | awk '{ printf "%s\n\n",$0; }'
 
 	#echo
 
