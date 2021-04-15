@@ -10,7 +10,7 @@
 #################################################
 
 DELAY=0
-DURATION=60	# Default delay (in seconds) if the "-d" (delay) option is selected
+DURATION=240	# Default delay (in seconds) if the "-d" (delay) option is selected
 
 if [ $# -ge 1 -a ""$1"" = "-d" ]
 then
