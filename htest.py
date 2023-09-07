@@ -22,20 +22,7 @@ from skyfield.api import Topos, load, wgs84
 import datetime
 from datetime import timezone
 
-
 PI=3.1415926535859
-
-# Waveshare pan/tilt assembly's IP address -
-#dst_ip1="11.11.11.11"
-#dst_ip1="127.0.0.1"
-# TESTING -
-#dst_ip1="192.168.2.104"
-# PRODUCTION -
-dst_ip1="192.168.2.88"
-
-src_prt=3131
-dst_prt=3131
-
 
 try:
     import configparser
