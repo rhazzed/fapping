@@ -4,7 +4,7 @@
 #
 # HISTORICAL INFORMATION -
 #
-#  2022-03-10  KA9CQL msipin  Created from the current version of satnow.py
+#  2022-03-10  msipin  Created from the current version of satnow.py
 ######################################################
 # You need to install this Python3 library -
 #       sudo pip3 install skyfield
