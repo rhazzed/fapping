@@ -1,6 +1,12 @@
 #!/bin/sh
 ##############################
 # w2 - A "watch" command that was gettting too complex for the command line...
+#
+# HISTORICAL INFORMATION -
+#
+#  2023-03-28  msipin  Added this historical info header area. Sorted ICAO list out of alerts.conf by ICAO for top-to-bottom consistency
+#  2023-04-13  msipin  Sorted ADS-B records found in aircraft.json
+#  2023-08-29  msipin  Cleaned up output format quite a bit!!
 ##############################
 
 DUR=10
@@ -12,18 +18,26 @@ do
 	date
 	echo
 	sort /run/dump1090-fa/helos.txt
-	echo
-
-	`cat /run/dump1090-fa/helos.txt | awk '{ print $1;print $2; }' | grep "..." |sort -u | grep -v unk|awk 'BEGIN { printf "egrep -i \"";}{ printf "%s|",$1;} END { printf "category.:.B[2,6,7]\" /run/dump1090-fa/aircraft.json\n" }'` | awk '{ printf "%s\n\n",$0; }'
-
 	#echo
 
-	egrep 'category.:.B[2,6,7]' /run/dump1090-fa/aircraft.json
+	`cat /run/dump1090-fa/helos.txt | awk '{ print $1;print $2; }' | grep "..." |sort -u | grep -v unk|awk 'BEGIN { printf "egrep -i \"";}{ printf "%s|",$1;} END { printf "category.:.B[2,6,7]\" /run/dump1090-fa/aircraft.json\n" }'` | sort | awk '{ printf "\n%s",$0; }' >/dev/shm/w2.data
+	echo >>/dev/shm/w2.data
 
-	echo
+	echo "-------"
+
+	egrep 'category.:.B[2,6,7]' /run/dump1090-fa/aircraft.json | sort >>/dev/shm/w2.data
+
+	##sort -u /dev/shm/w2.data | sed 's/"/ /g' | sed 's/  / /g' | sed 's/ ,/,/g' | sed 's/ :/:/g' | sed 's/: /:/g' | awk '{ printf "%s\n\n",$0; }'
+	sort -u /dev/shm/w2.data | awk '{ gsub(/   /, "", $0); if (NF > 0) { printf "   >> %s\n",$0; }; }' | sed 's/"//g' | sed 's/,/, /g'
+
+	echo "-------"
 
 	icaos=`cat /run/dump1090-fa/helos.txt | awk '{ printf "%s|",$1 } END {printf "jabber";};'`
-	egrep -i "$icaos" alerts.conf | grep "#"
+	egrep -i "$icaos" alerts.conf | grep "#" | sort -u
+
+	echo
+	icaos2=`cat /run/dump1090-fa/helos.txt | awk '{ printf ",%s",$1 } END {printf ","; };'`
+	echo $icaos2
  
 	sleep $DUR
 done
