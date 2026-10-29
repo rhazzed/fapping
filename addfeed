@@ -1,0 +1,37 @@
+#!/bin/sh
+###################################
+# addfeed - Add externally-identified PiAware/FlightAware feed to my own radar
+#
+# HISTORICAL INFORMATION -
+#
+#  2023-11-24  mjs  Recreated from past work doing this (to get #1/#2 in the world! W00T!)
+###################################
+
+# NOTE: MUST DO THIS FIRST! - mknod mypipe p
+
+exit 0
+
+TO-DO: ADD THIS TO MY LOCAL RADAR - http://47.152.70.243:8085/data/aircraft.json
+
+# REFERENCES FROM cmds.hacking_stats.txt -
+##############################
+nc crawled.mapwithlove.com 4000 0<mypipe | nc 127.0.0.1 30104 | tee mypipe
+nc 127.0.0.1 30104 0<mypipe | nc crawled.mapwithlove.com 4000 | tee mypipe
+nc 127.0.0.1 30104 0<mypipe | nc crawled.mapwithlove.com 3007 | tee mypipe
+nc 127.0.0.1 30104 0<mypipe | nc http://136.56.42.158:8081/ 30005 | tee mypipe
+nc 127.0.0.1 30104 0<mypipe | nc 136.56.42.158 30005 | tee mypipe
+nc 127.0.0.1 30104 0<mypipe | nc 24.166.3.192 30005 | tee mypipe
+nc 127.0.0.1 30104 0<mypipe | nc 93.67.147.123 30005 | tee mypipe
+nc 127.0.0.1 30104 0<mypipe | nc crawled.mapwithlove.com 3007 | tee mypipe
+nc 127.0.0.1 30104 0<mypipe | nc crawled.mapwithlove.com 3007 | tee mypipe >/dev/null
+
+
+ 
+echo http://crawled.mapwithlove.com:8081/data/aircraft.json LOTS OF PLANES WORLD-WIDE
+ 
+fa2sbs.py 5150 crawled.mapwithlove.com:8081
+fa2sbs.py 5150 crawled.mapwithlove.com
+ 
+cp fa2sbs.py test.py
+test.py 5150 crawled.mapwithlove.com:8081
+ 

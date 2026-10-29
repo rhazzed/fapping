@@ -6,7 +6,6 @@
 #
 #  2023-03-28  msipin  Added this historical info header area. Sorted ICAO list out of alerts.conf by ICAO for top-to-bottom consistency
 #  2023-04-13  msipin  Sorted ADS-B records found in aircraft.json
-#  2023-08-29  msipin  Cleaned up output format quite a bit!!
 ##############################
 
 DUR=10
@@ -33,7 +32,7 @@ do
 	echo "-------"
 
 	icaos=`cat /run/dump1090-fa/helos.txt | awk '{ printf "%s|",$1 } END {printf "jabber";};'`
-	egrep -i "$icaos" alerts.conf | grep "#" | sort -u
+	egrep -i "$icaos" /usr/local/bin/alerts.conf | grep "#" | sort -u
 
 	echo
 	icaos2=`cat /run/dump1090-fa/helos.txt | awk '{ printf ",%s",$1 } END {printf ","; };'`

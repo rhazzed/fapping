@@ -1,0 +1,5 @@
+TO-DOs:
+
+* Add "feeds.conf" contents to my alert software to allow more than just my local ADS-B receiver to trigger email/text alerts
+* Possibly include the SBDO feed in that file in my local radar (a la what we did before to get to #1/#2 submitters on Flightaware.com)
+

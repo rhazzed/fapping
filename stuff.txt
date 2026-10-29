@@ -1,0 +1,13 @@
+
+a19122  JANET05  N20RA   Flies between Palmdale Plant 42 and Tonopah, NV
+a2b320  JANET60, JANET64  N273RH
+a2ec0c  JANET37,JANET68,JANET73  N288DP
+a3685d  JANET48,JANET14,JANET73,JANET37,JANET68,JANET30,JANET20,JANET74  N319BD
+a3e5b5  JANET30,N350KG   Did a flight from Tonopah, NV to loitering around USAF Plant 42 ("Skunkworks") near Palmdale 2020-11-10!! It stopped ADS-B TX above Palmdale
+a4207f  JANET74, JANET47  N365SR
+a89BB0  JANET04  N654BA  BE20 that flies from Edwards AFB to "various places"
+a8b80a  JANET01,N661BA  Beech 200 Super King Air first seen 2023-11-27 out of NTTR
+abcac9  JANET16  N859WP  First seen entering NTTR 2023-11-14
+abf0fd  JANET74  N869HH
+ac96df  JANET10  N910CB  US Air Force Beech 300 Super King Air - Out of NTTR to (Edwards AFB?) 2023-08-24
+adce1a  JANET09  N989RR  US Air Force Beech 300 Super King Air - Frequently flies between NTTR/Vegas and Palmdale/Pt Mugu (circa 2023-08/09)

@@ -1,0 +1,10 @@
+#!/bin/sh
+##########################
+# trysbs - Try to pipe another FlightAware instance's SBS data into my own server/map
+##########################
+
+
+#mknod mypipe p
+#(nohup python dump10902sbs.py 5150 38.7875 -90.6282 mappa.flyitalyadsb.com 2>&1)&
+#nc 127.0.0.1 30104 0<mypipe | nc 127.0.0.1 5150 | tee mypipe >/dev/null
+nc 127.0.0.1 30104 0<mypipe | nc 192.168.50.83 5150 | tee mypipe >/dev/null

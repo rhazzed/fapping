@@ -1,0 +1,47 @@
+#!/bin/sh
+##########################################################
+# adsbclean - "Un munge" ADSB URLs for globe.adsbexchange.com; remove dupes from URL and return a URL with a uniqified + sorted ICAO list.
+#             You provide one argument to this function - a globe.adsbexchange.com URL that includes multiple (possibly duplicated) ICAOs.
+#             This script pulls out each ICAO, de-dupes, sorts and rebuilds the URL with ICAOs sorted in ascending order.
+#
+# HISTORICAL INFORAMTION -
+#
+#  2021-12-10  msipin  Created.
+##########################################################
+
+usage() {
+
+	echo
+	echo "usage: $0 <globe.adsbexchange.com_URL_with_ICAO_list>"
+	echo
+}
+
+if [ $# -ne 1 ]
+then
+	usage;
+	exit 2
+fi
+
+echo
+echo $* | sed "s/^.*=//" | awk -F"," '{
+
+for (i=1;i<= NF;i++) {
+	print $i;
+}
+
+}' | sort -u | awk 'BEGIN {
+
+printf("https://globe.adsbexchange.com/?icao=")
+
+} {
+
+if (NR > 1) printf(",");
+printf("%s",$i);
+} END {
+printf("\n");
+}'
+
+echo
+
+exit 0
+
